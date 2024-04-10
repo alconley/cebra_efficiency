@@ -45,6 +45,30 @@ pub enum ChannelDataField {
     X2,
     Xavg,
     Theta,
+
+    Cebra0Energy,
+    Cebra1Energy,
+    Cebra2Energy,
+    Cebra3Energy,
+    Cebra4Energy,
+    Cebra5Energy,
+    Cebra6Energy,
+
+    Cebra0Short,
+    Cebra1Short,
+    Cebra2Short,
+    Cebra3Short,
+    Cebra4Short,
+    Cebra5Short,
+    Cebra6Short,
+
+    Cebra0Time,
+    Cebra1Time,
+    Cebra2Time,
+    Cebra3Time,
+    Cebra4Time,
+    Cebra5Time,
+    Cebra6Time,
 }
 
 impl ChannelDataField {
@@ -183,6 +207,48 @@ impl ChannelData {
                     self.set_value(&ChannelDataField::AnodeBackEnergy, hit.energy);
                     self.set_value(&ChannelDataField::AnodeBackShort, hit.energy_short);
                     self.set_value(&ChannelDataField::AnodeBackTime, hit.timestamp);
+                }
+
+                ChannelType::Cebra0 => {
+                    self.set_value(&ChannelDataField::Cebra0Energy, hit.energy);
+                    self.set_value(&ChannelDataField::Cebra0Short, hit.energy_short);
+                    self.set_value(&ChannelDataField::Cebra0Time, hit.timestamp);
+                }
+
+                ChannelType::Cebra1 => {
+                    self.set_value(&ChannelDataField::Cebra1Energy, hit.energy);
+                    self.set_value(&ChannelDataField::Cebra1Short, hit.energy_short);
+                    self.set_value(&ChannelDataField::Cebra1Time, hit.timestamp);
+                }
+
+                ChannelType::Cebra2 => {
+                    self.set_value(&ChannelDataField::Cebra2Energy, hit.energy);
+                    self.set_value(&ChannelDataField::Cebra2Short, hit.energy_short);
+                    self.set_value(&ChannelDataField::Cebra2Time, hit.timestamp);
+                }
+
+                ChannelType::Cebra3 => {
+                    self.set_value(&ChannelDataField::Cebra3Energy, hit.energy);
+                    self.set_value(&ChannelDataField::Cebra3Short, hit.energy_short);
+                    self.set_value(&ChannelDataField::Cebra3Time, hit.timestamp);
+                }
+
+                ChannelType::Cebra4 => {
+                    self.set_value(&ChannelDataField::Cebra4Energy, hit.energy);
+                    self.set_value(&ChannelDataField::Cebra4Short, hit.energy_short);
+                    self.set_value(&ChannelDataField::Cebra4Time, hit.timestamp);
+                }
+
+                ChannelType::Cebra5 => {
+                    self.set_value(&ChannelDataField::Cebra5Energy, hit.energy);
+                    self.set_value(&ChannelDataField::Cebra5Short, hit.energy_short);
+                    self.set_value(&ChannelDataField::Cebra5Time, hit.timestamp);
+                }
+
+                ChannelType::Cebra6 => {
+                    self.set_value(&ChannelDataField::Cebra6Energy, hit.energy);
+                    self.set_value(&ChannelDataField::Cebra6Short, hit.energy_short);
+                    self.set_value(&ChannelDataField::Cebra6Time, hit.timestamp);
                 }
 
                 _ => continue,

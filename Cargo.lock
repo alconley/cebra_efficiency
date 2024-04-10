@@ -416,6 +416,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "cebra_sps_eventbuilder"
+version = "0.1.0"
+dependencies = [
+ "bitflags 2.5.0",
+ "eframe",
+ "egui",
+ "env_logger",
+ "flate2",
+ "log",
+ "nom",
+ "polars",
+ "rand",
+ "rfd",
+ "serde",
+ "serde_yaml",
+ "strum",
+ "strum_macros 0.26.2",
+ "tar",
+ "wasm-bindgen-futures",
+]
+
+[[package]]
 name = "cesu8"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2752,28 +2774,6 @@ checksum = "05ffd9c0a93b7543e062e759284fcf5f5e3b098501104bfbdde4d404db792871"
 dependencies = [
  "libc",
  "windows-sys 0.52.0",
-]
-
-[[package]]
-name = "sps_eventbuilder"
-version = "0.1.0"
-dependencies = [
- "bitflags 2.5.0",
- "eframe",
- "egui",
- "env_logger",
- "flate2",
- "log",
- "nom",
- "polars",
- "rand",
- "rfd",
- "serde",
- "serde_yaml",
- "strum",
- "strum_macros 0.26.2",
- "tar",
- "wasm-bindgen-futures",
 ]
 
 [[package]]

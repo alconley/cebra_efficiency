@@ -296,6 +296,41 @@ impl EVBApp {
                                                 );
                                                 ui.selectable_value(
                                                     channel_type,
+                                                    ChannelType::Cebra0,
+                                                    "Cebra0",
+                                                );
+                                                ui.selectable_value(
+                                                    channel_type,
+                                                    ChannelType::Cebra1,
+                                                    "Cebra1",
+                                                );
+                                                ui.selectable_value(
+                                                    channel_type,
+                                                    ChannelType::Cebra2,
+                                                    "Cebra2",
+                                                );
+                                                ui.selectable_value(
+                                                    channel_type,
+                                                    ChannelType::Cebra3,
+                                                    "Cebra3",
+                                                );
+                                                ui.selectable_value(
+                                                    channel_type,
+                                                    ChannelType::Cebra4,
+                                                    "Cebra4",
+                                                );
+                                                ui.selectable_value(
+                                                    channel_type,
+                                                    ChannelType::Cebra5,
+                                                    "Cebra5",
+                                                );
+                                                ui.selectable_value(
+                                                    channel_type,
+                                                    ChannelType::Cebra6,
+                                                    "Cebra6",
+                                                );
+                                                ui.selectable_value(
+                                                    channel_type,
                                                     ChannelType::None,
                                                     "None",
                                                 );
@@ -509,7 +544,7 @@ impl EVBApp {
     }
 
     fn ui_tabs(&mut self, ui: &mut egui::Ui) {
-        egui::TopBottomPanel::top("sps_cebra_top_panel").show_inside(ui, |ui| {
+        egui::TopBottomPanel::top("cebra_sps_top_panel").show_inside(ui, |ui| {
             ui.horizontal(|ui| {
                 if ui
                     .selectable_label(
@@ -634,7 +669,7 @@ impl App for EVBApp {
     #[cfg(not(target_arch = "wasm32"))]
     fn update(&mut self, ctx: &eframe::egui::Context, _frame: &mut eframe::Frame) {
         if self.window {
-            egui::Window::new("SE-SPS Event Builder")
+            egui::Window::new("CeBrA - SE-SPS Event Builder")
                 .min_width(200.0)
                 .max_width(600.0)
                 .show(ctx, |ui| {
@@ -650,7 +685,7 @@ impl App for EVBApp {
     #[cfg(target_arch = "wasm32")]
     fn update(&mut self, ctx: &eframe::egui::Context, _frame: &mut eframe::Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {
-            ui.label("SPS Eventbuilder is not supported in the browser.");
+            ui.label("CeBrA - SPS Eventbuilder is not supported in the browser.");
         });
     }
 }

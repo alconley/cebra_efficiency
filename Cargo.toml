@@ -1,5 +1,5 @@
 [package]
-name = "sps_eventbuilder"
+name = "cebra_sps_eventbuilder"
 version = "0.1.0"
 authors = ["Alex Conley <imaconley1@gmail.com>"]
 edition = "2021"
