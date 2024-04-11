@@ -298,7 +298,7 @@ impl ExpFitter {
             let num_points = 1000;
 
             let start = 0.0;
-            let end = max_x + 0.0;
+            let _end = max_x + 0.0;
             let end = 7000.0;
 
 
