@@ -18,6 +18,8 @@ pub struct ExpFitter {
     pub fit_uncertainity_lines: Option<Vec<Vec<PlotPoint>>>,
 
     pub fit_label: String,
+
+    pub color: egui::Color32,
 }
 
 impl ExpFitter {
@@ -30,6 +32,7 @@ impl ExpFitter {
             fit_line: None,
             fit_uncertainity_lines: None,
             fit_label: "".to_string(),
+            color: egui::Color32::LIGHT_BLUE,
         }
     }
 
@@ -43,6 +46,10 @@ impl ExpFitter {
 
     fn exponential_pd_d(x: &DVector<f64>, d: f64) -> DVector<f64> {
         x.map(|x_val| (x_val / d.powi(2)) * (-x_val / d).exp())
+    }
+
+    pub fn color_ui(&mut self, ui: &mut egui::Ui) {
+        ui.color_edit_button_srgba(&mut self.color);
     }
 
     pub fn single_exp_fit(&mut self, initial_b_guess: f64) {
@@ -343,12 +350,11 @@ impl ExpFitter {
         }
     }
  
-    pub fn draw_fit_line(&self, plot_ui: &mut PlotUi, color: egui::Color32, name: String) {
+    pub fn draw_fit_line(&self, plot_ui: &mut PlotUi, name: String) {
         if let Some(fit_line) = &self.fit_line {
             for points in fit_line.iter() {
                 let line = Line::new(PlotPoints::Owned(points.clone()))
-                    .color(color)
-                    .stroke(egui::Stroke::new(1.0, color))
+                    .stroke(egui::Stroke::new(1.0, self.color))
                     .name(name.clone());
 
                 plot_ui.line(line);
@@ -359,7 +365,7 @@ impl ExpFitter {
             for points in fit_line_uncertainity.iter() {
 
                 let uncertainity_band = Polygon::new(PlotPoints::Owned(points.clone()))
-                .stroke(egui::Stroke::new(0.0, color))
+                .stroke(egui::Stroke::new(0.0, self.color))
                 .width(0.0)
                 .name(name.clone());
 
@@ -384,8 +390,13 @@ impl Fitter {
 
     pub fn ui(&mut self, ui: &mut egui::Ui) {
 
+        ui.horizontal(|ui| {
             ui.label(self.name.to_string());
 
+            if self.exp_fitter.is_some() {
+                self.exp_fitter.as_mut().unwrap().color_ui(ui);
+            }
+        });
 
         ui.horizontal(|ui| {
 

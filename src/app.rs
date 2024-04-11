@@ -5,8 +5,7 @@ use serde_yaml;
 use std::fs::File;
 use std::io::{Read, Write};
 
-use super::gamma_source::GammaSource;
-use super::measurements::{Measurement, MeasurementHandler};
+use super::measurements::MeasurementHandler;
 
 #[derive(Default, serde::Deserialize, serde::Serialize)]
 pub struct CeBrAEfficiencyApp {
@@ -20,50 +19,6 @@ impl CeBrAEfficiencyApp {
             measurment_handler: MeasurementHandler::new(),
             window,
         }
-    }
-
-    fn get_fsu_152eu_source(&mut self) -> GammaSource {
-        let mut gamma_source = GammaSource::new();
-        gamma_source.name = "152Eu".to_string();
-        gamma_source.half_life = 13.517; // years
-
-        gamma_source.source_activity_calibration.activity = 74.370; // kBq
-        gamma_source.source_activity_calibration.date =
-            chrono::NaiveDate::from_ymd_opt(2017, 3, 17);
-
-        gamma_source.add_gamma_line(121.7817, 28.53, 0.16);
-        gamma_source.add_gamma_line(244.6974, 7.55, 0.04);
-        gamma_source.add_gamma_line(344.2785, 26.59, 0.20);
-        gamma_source.add_gamma_line(411.1164, 2.237, 0.013);
-        gamma_source.add_gamma_line(443.9650, 2.827, 0.014);
-        gamma_source.add_gamma_line(778.9045, 12.93, 0.08);
-        gamma_source.add_gamma_line(867.3800, 4.23, 0.03);
-        gamma_source.add_gamma_line(964.0570, 14.51, 0.07);
-        gamma_source.add_gamma_line(1085.837, 10.11, 0.05);
-        gamma_source.add_gamma_line(1112.076, 13.67, 0.08);
-        gamma_source.add_gamma_line(1408.0130, 20.87, 0.09);
-
-        gamma_source
-    }
-
-    fn get_fsu_56co_source(&mut self) -> GammaSource {
-        let mut gamma_source = GammaSource::new();
-        gamma_source.name = "56Co".to_string();
-
-        let co60_halflife_days = 77.236; // days
-        gamma_source.half_life = co60_halflife_days / 365.25; // years
-
-        gamma_source.source_activity_calibration.activity = 108.0; // kBq (arbitrary scaled to match 152Eu)
-        gamma_source.source_activity_calibration.date =
-            chrono::NaiveDate::from_ymd_opt(2022, 4, 18);
-
-        gamma_source.add_gamma_line(846.7638, 99.9399, 0.0023);
-        gamma_source.add_gamma_line(1037.8333, 14.03, 0.05);
-        gamma_source.add_gamma_line(1360.196, 4.283, 0.013);
-        gamma_source.add_gamma_line(2598.438, 16.96, 0.04);
-        gamma_source.add_gamma_line(3451.119, 0.942, 0.006);
-
-        gamma_source
     }
 
     #[cfg(not(target_arch = "wasm32"))]
@@ -140,28 +95,6 @@ impl CeBrAEfficiencyApp {
         });
 
         egui::SidePanel::left("cebra_efficiency_left_side_panel").show_inside(ui, |ui| {
-            ui.horizontal(|ui| {
-                ui.label("FSU's Current Sources:");
-
-                if ui.button("152Eu").clicked() {
-                    let eu152 = self.get_fsu_152eu_source();
-
-                    self.measurment_handler
-                        .measurements
-                        .push(Measurement::new(Some(eu152)));
-                }
-
-                if ui.button("56Co").clicked() {
-                    let co56 = self.get_fsu_56co_source();
-
-                    self.measurment_handler
-                        .measurements
-                        .push(Measurement::new(Some(co56)));
-                }
-
-                ui.separator();
-            });
-
             self.measurment_handler.sources_ui(ui);
         });
 

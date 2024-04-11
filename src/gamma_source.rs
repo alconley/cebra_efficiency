@@ -1,5 +1,41 @@
 use super::detector::DetectorLine;
-use super::gamma_line::GammaLine;
+use egui_plot::MarkerShape;
+
+#[derive(Default, Clone, serde::Deserialize, serde::Serialize)]
+pub struct GammaLine {
+    pub energy: f64, // keV
+    pub intensity: f64,
+    pub intensity_uncertainty: f64,
+}
+
+impl GammaLine {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn gamma_line_ui(&mut self, ui: &mut egui::Ui) {
+        ui.add(
+            egui::DragValue::new(&mut self.energy)
+                .speed(1.0)
+                .clamp_range(0.0..=f64::INFINITY)
+                .suffix(" keV"),
+        );
+
+        ui.add(
+            egui::DragValue::new(&mut self.intensity)
+                .speed(1)
+                .clamp_range(0.0..=100.0)
+                .suffix("%"),
+        );
+
+        ui.add(
+            egui::DragValue::new(&mut self.intensity_uncertainty)
+                .speed(0.1)
+                .clamp_range(0.0..=100.0)
+                .suffix("%"),
+        );
+    }
+}
 
 #[derive(Default, Clone, serde::Deserialize, serde::Serialize)]
 pub struct SourceActivity {
@@ -7,7 +43,7 @@ pub struct SourceActivity {
     pub date: Option<chrono::NaiveDate>,
 }
 
-#[derive(Default, Clone, serde::Deserialize, serde::Serialize)]
+#[derive(Clone, serde::Deserialize, serde::Serialize)]
 pub struct GammaSource {
     pub name: String,
     pub gamma_lines: Vec<GammaLine>,
@@ -15,11 +51,64 @@ pub struct GammaSource {
     pub source_activity_calibration: SourceActivity,
     pub source_activity_measurement: SourceActivity,
     pub measurement_time: f64, // hours
+
+    #[serde(skip)]
+    pub marker_shape: Option<MarkerShape>,
+    pub marker_size: f32,
 }
 
 impl GammaSource {
     pub fn new() -> Self {
-        Self::default()
+        Self {
+            name: String::new(),
+            gamma_lines: Vec::new(),
+            half_life: 0.0,
+            source_activity_calibration: SourceActivity::default(),
+            source_activity_measurement: SourceActivity::default(),
+            measurement_time: 0.0,
+            marker_shape: Some(MarkerShape::Circle),
+            marker_size: 5.0,
+        }
+    }
+
+    pub fn fsu_152eu_source(&mut self) {
+        self.name = "152Eu".to_string();
+        self.half_life = 13.517; // years
+
+        self.source_activity_calibration.activity = 74.370; // kBq
+        self.source_activity_calibration.date =
+            chrono::NaiveDate::from_ymd_opt(2017, 3, 17);
+
+        self.add_gamma_line(121.7817, 28.53, 0.16);
+        self.add_gamma_line(244.6974, 7.55, 0.04);
+        self.add_gamma_line(344.2785, 26.59, 0.20);
+        self.add_gamma_line(411.1164, 2.237, 0.013);
+        self.add_gamma_line(443.9650, 2.827, 0.014);
+        self.add_gamma_line(778.9045, 12.93, 0.08);
+        self.add_gamma_line(867.3800, 4.23, 0.03);
+        self.add_gamma_line(964.0570, 14.51, 0.07);
+        self.add_gamma_line(1085.837, 10.11, 0.05);
+        self.add_gamma_line(1112.076, 13.67, 0.08);
+        self.add_gamma_line(1408.0130, 20.87, 0.09);
+
+    }
+
+    pub fn fsu_56co_source(&mut self) {
+        self.name = "56Co".to_string();
+
+        let co60_halflife_days = 77.236; // days
+        self.half_life = co60_halflife_days / 365.25; // years
+
+        self.source_activity_calibration.activity = 108.0; // kBq (arbitrary scaled to match 152Eu)
+        self.source_activity_calibration.date =
+            chrono::NaiveDate::from_ymd_opt(2022, 4, 18);
+
+        self.add_gamma_line(846.7638, 99.9399, 0.0023);
+        self.add_gamma_line(1037.8333, 14.03, 0.05);
+        self.add_gamma_line(1360.196, 4.283, 0.013);
+        self.add_gamma_line(2598.438, 16.96, 0.04);
+        self.add_gamma_line(3451.119, 0.942, 0.006);
+
     }
 
     pub fn add_gamma_line(&mut self, energy: f64, intensity: f64, intensity_uncertainty: f64) {
@@ -50,8 +139,8 @@ impl GammaSource {
 
     pub fn gamma_line_efficiency_from_source_measurement(&self, line: &mut DetectorLine) {
         let source_activity = self.source_activity_measurement.activity;
-        let activity_uncertainty = source_activity * 0.05; // 5% uncertainty in activity
-        // let activity_uncertainty = 0.0; // 0% uncertainty in activity
+        // let activity_uncertainty = source_activity * 0.05; // 5% uncertainty in activity
+        let activity_uncertainty = 0.0; // 0% uncertainty in activity
 
         let run_time = self.measurement_time * 3600.0; // convert hours to seconds
         let intensity = line.intensity;
@@ -73,6 +162,21 @@ impl GammaSource {
 
     pub fn source_ui(&mut self, ui: &mut egui::Ui) {
         ui.collapsing("Source", |ui| {
+
+            ui.horizontal(|ui| {
+                ui.label("FSU Sources:");
+
+                if ui.button("152Eu").clicked() {
+                    self.fsu_152eu_source();
+                }
+
+                if ui.button("56Co").clicked() {
+                    self.fsu_56co_source();
+                }
+            });
+
+            ui.separator();
+
             egui::Grid::new("source_ui")
                 .striped(true)
                 .min_col_width(50.0)
@@ -150,6 +254,33 @@ impl GammaSource {
                     ));
 
                     ui.end_row();
+
+                    ui.label("Marker Shape:");
+                    // combo box of all the shapes
+                    let marker_shape = self.marker_shape.unwrap();
+                    let _marker_shape = egui::ComboBox::from_id_source("marker_shape")
+                        .selected_text(format!("{:?}", marker_shape))
+                        .show_ui(ui, |ui| {
+                            ui.selectable_value(&mut self.marker_shape, Some(MarkerShape::Circle), "Circle");
+                            ui.selectable_value(&mut self.marker_shape, Some(MarkerShape::Diamond), "Diamond");
+                            ui.selectable_value(&mut self.marker_shape, Some(MarkerShape::Square), "Square");
+                            ui.selectable_value(&mut self.marker_shape, Some(MarkerShape::Cross), "Cross");
+                            ui.selectable_value(&mut self.marker_shape, Some(MarkerShape::Plus), "Plus");
+                            ui.selectable_value(&mut self.marker_shape, Some(MarkerShape::Up), "Up");
+                            ui.selectable_value(&mut self.marker_shape, Some(MarkerShape::Down), "Down");
+                            ui.selectable_value(&mut self.marker_shape, Some(MarkerShape::Left), "Left");
+                            ui.selectable_value(&mut self.marker_shape, Some(MarkerShape::Right), "Right");
+                            ui.selectable_value(&mut self.marker_shape, Some(MarkerShape::Asterisk), "Asterisk");
+                        });
+
+                        ui.add(
+                            egui::DragValue::new(&mut self.marker_size)
+                                .speed(0.1)
+                                .clamp_range(0.0..=f32::INFINITY)
+                                .prefix("Size: "),
+                        );
+
+                    ui.end_row();
                     ui.label("Energy");
                     ui.label("Intensity");
                     ui.label("");
@@ -185,7 +316,6 @@ impl GammaSource {
         ui.separator();
     }
 
-    // Modify other methods to work with the new gamma_lines structure
     pub fn remove_gamma_line(&mut self, index: usize) {
         self.gamma_lines.remove(index);
     }

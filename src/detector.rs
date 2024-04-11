@@ -3,9 +3,9 @@ use super::gamma_source::GammaSource;
 
 #[derive(Default, Clone, serde::Deserialize, serde::Serialize)]
 pub struct DetectorLine {
+    pub energy: f64,
     pub count: f64,
     pub uncertainty: f64,
-    pub energy: f64,
     pub intensity: f64,
     pub intensity_uncertainty: f64,
     pub efficiency: f64,
@@ -38,6 +38,7 @@ pub struct Detector {
     pub lines: Vec<DetectorLine>,
     pub exp_fit: Option<ExpFitter>,
     pub to_remove: Option<bool>,
+    pub color: egui::Color32,
 }
 
 impl Detector {
@@ -110,6 +111,10 @@ impl Detector {
                 if ui.button("+").clicked() {
                     self.lines.push(DetectorLine::default());
                 }
+
+                // combo box to pick the colors
+                ui.label("Color:");
+                ui.color_edit_button_srgba(&mut self.color);
 
             });
 
