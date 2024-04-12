@@ -209,12 +209,10 @@ impl ExpFitter {
                 })
                 .collect();
 
-            // subtract fit_points and confidence_band to get the lower points
             let lower_points: Vec<(f64,f64)> = fit_points.iter().zip(confidence_band.iter()).map(|(fit_point, confidence_point)| {
                 (fit_point.0, fit_point.1 - confidence_point.1)
             }).collect();
 
-            // add fit_points and confidence_band to get the upper points
             let upper_points: Vec<(f64,f64)> = fit_points.iter().zip(confidence_band.iter()).map(|(fit_point, confidence_point)| {
                 (fit_point.0, fit_point.1 + confidence_point.1)
             }).collect();
@@ -222,25 +220,6 @@ impl ExpFitter {
             self.fit_line_points = fit_points;
             self.upper_uncertainity_points = upper_points;
             self.lower_uncertainity_points = lower_points;
-
-            
-            // egui only supports convex polygons so i need to split the polygon into multiple.
-            // So each polygon will be the two points in the upper and two in the lower
-            // then the next polygon will be the next two points in the upper and lower
-            // and so on
-
-            // let mut polygons: Vec<Vec<PlotPoint>> = Vec::new();
-            // for i in 0..num_points {
-            //     let polygon = vec![
-            //         upper_points[i],
-            //         upper_points[i + 1],
-            //         lower_points[i + 1],
-            //         lower_points[i],
-            //     ];
-            //     polygons.push(polygon);
-            // }
-            
-            // self.fit_uncertainity_lines = Some(polygons);
 
         }
     }
@@ -397,61 +376,48 @@ impl ExpFitter {
 
             let step = (end - start) / num_points as f64;
 
-            // // fit line
-            // let fit_points: Vec<PlotPoint> = (0..=num_points)
-            //     .map(|i| {
-            //         let x = start + i as f64 * step;
-            //         let y = parameter_a * (-x / parameter_b).exp()
-            //             + parameter_c * (-x / parameter_d).exp();
+            let fit_points: Vec<(f64,f64)> = (0..=num_points)
+                .map(|i| {
+                    let x = start + i as f64 * step;
+                    let y = parameter_a * (-x / parameter_b).exp()
+                        + parameter_c * (-x / parameter_d).exp();
 
-            //         PlotPoint::new(x, y)
-            //     })
-            //     .collect();
+                    (x, y)
+                })
+                .collect();
 
 
-            // let confidence_band: Vec<PlotPoint> = (0..=num_points)
-            //     .map(|i| {
-            //         // followed lmfits implementation
-            //         let x = start + i as f64 * step;
+            let confidence_band: Vec<(f64,f64)> = (0..=num_points)
+                .map(|i| {
+                    // followed lmfits implementation
+                    let x = start + i as f64 * step;
 
-            //         let dfda = (-x / (parameter_b)).exp();
-            //         let dfdb = parameter_a * (x / parameter_b.powi(2)) * (-x / parameter_b).exp();
-            //         let dfdc = (-x / (parameter_d)).exp();
-            //         let dfdd = parameter_c * (x / parameter_d.powi(2)) * (-x / parameter_d).exp();
+                    let dfda = (-x / (parameter_b)).exp();
+                    let dfdb = parameter_a * (x / parameter_b.powi(2)) * (-x / parameter_b).exp();
+                    let dfdc = (-x / (parameter_d)).exp();
+                    let dfdd = parameter_c * (x / parameter_d.powi(2)) * (-x / parameter_d).exp();
 
-            //         let y = scale * (  rchi2 * ( dfda*dfda*cov[0] + dfda*dfdb*cov[1] + dfda*dfdc*cov[2] + dfda*dfdd*cov[3] + 
-            //                                                  dfdb*dfda*cov[4] + dfdb*dfdb*cov[5] + dfdb*dfdc*cov[6] + dfdb*dfdd*cov[7] +
-            //                                                  dfdc*dfda*cov[8] + dfdc*dfdb*cov[9] + dfdc*dfdc*cov[10] + dfdc*dfdd*cov[11] +
-            //                                                  dfdd*dfda*cov[12] + dfdd*dfdb*cov[13] + dfdd*dfdc*cov[14] + dfdd*dfdd*cov[15] ) ).sqrt();
+                    let y = scale * (  rchi2 * ( dfda*dfda*cov[0] + dfda*dfdb*cov[1] + dfda*dfdc*cov[2] + dfda*dfdd*cov[3] + 
+                                                             dfdb*dfda*cov[4] + dfdb*dfdb*cov[5] + dfdb*dfdc*cov[6] + dfdb*dfdd*cov[7] +
+                                                             dfdc*dfda*cov[8] + dfdc*dfdb*cov[9] + dfdc*dfdc*cov[10] + dfdc*dfdd*cov[11] +
+                                                             dfdd*dfda*cov[12] + dfdd*dfdb*cov[13] + dfdd*dfdc*cov[14] + dfdd*dfdd*cov[15] ) ).sqrt();
 
-            //         PlotPoint::new(x, y)
-            //     })
-            //     .collect();
+                    (x,y)
+                })
+                .collect();
 
-            // // add fit_points and confidence_band to get the upper points
-            // let upper_points: Vec<PlotPoint> = fit_points.iter().zip(confidence_band.iter()).map(|(fit_point, confidence_point)| {
-            //     PlotPoint::new(fit_point.x, fit_point.y + confidence_point.y)
-            // }).collect(); 
 
-            // // subtract fit_points and confidence_band to get the lower points
-            // let lower_points: Vec<PlotPoint> = fit_points.iter().zip(confidence_band.iter()).map(|(fit_point, confidence_point)| {
-            //     PlotPoint::new(fit_point.x, fit_point.y - confidence_point.y)
-            // }).collect();
+            let lower_points: Vec<(f64,f64)> = fit_points.iter().zip(confidence_band.iter()).map(|(fit_point, confidence_point)| {
+                (fit_point.0, fit_point.1 - confidence_point.1)
+            }).collect();
 
-            // self.fit_line = Some(vec![fit_points]);
+            let upper_points: Vec<(f64,f64)> = fit_points.iter().zip(confidence_band.iter()).map(|(fit_point, confidence_point)| {
+                (fit_point.0, fit_point.1 + confidence_point.1)
+            }).collect();
 
-            // let mut polygons: Vec<Vec<PlotPoint>> = Vec::new();
-            // for i in 0..num_points {
-            //     let polygon = vec![
-            //         upper_points[i],
-            //         upper_points[i + 1],
-            //         lower_points[i + 1],
-            //         lower_points[i],
-            //     ];
-            //     polygons.push(polygon);
-            // }
-            
-            // self.fit_uncertainity_lines = Some(polygons);
+            self.fit_line_points = fit_points;
+            self.upper_uncertainity_points = upper_points;
+            self.lower_uncertainity_points = lower_points;
         }
     }
  
@@ -467,39 +433,34 @@ impl ExpFitter {
         plot_ui.line(line);
 
         // convert the upper uncertainity points to PlotPoints
-        // let upper_uncertainity_plot_points = self.upper_uncertainity_points.iter().map(|(x,y)| PlotPoint::new(*x,*y)).collect();
-        // let lower_uncertainity_plot_points = self.lower_uncertainity_points.iter().map(|(x,y)| PlotPoint::new(*x,*y)).collect();
-
-        // let uncertainity_band = Polygon::new(PlotPoints::Owned(fit_uncertainity_plot_points))
-        // .stroke(egui::Stroke::new(0.0, self.color))
-        // .width(0.0)
-        // .name(name.clone());
-
-        // plot_ui.polygon(uncertainity_band);
+        let upper_uncertainity_plot_points: Vec<PlotPoint> = self.upper_uncertainity_points.iter().map(|(x,y)| PlotPoint::new(*x,*y)).collect();
+        let lower_uncertainity_plot_points: Vec<PlotPoint> = self.lower_uncertainity_points.iter().map(|(x,y)| PlotPoint::new(*x,*y)).collect();
 
 
-        // if let Some(fit_line) = &self.fit_line {
-        //     for points in fit_line.iter() {
-        //         let line = Line::new(PlotPoints::Owned(points.clone()))
-        //             .stroke(egui::Stroke::new(1.0, self.color))
-        //             .name(name.clone());
+        // egui only supports convex polygons so i need to split the polygon into multiple.
+        // So each polygon will be the two points in the upper and two in the lower
+        // then the next polygon will be the next two points in the upper and lower
+        // and so on
+        let num_points = upper_uncertainity_plot_points.len() - 1;
+        let mut polygons: Vec<Vec<PlotPoint>> = Vec::new();
+        for i in 0..num_points {
+            let polygon = vec![
+                upper_uncertainity_plot_points[i],
+                upper_uncertainity_plot_points[i + 1],
+                lower_uncertainity_plot_points[i + 1],
+                lower_uncertainity_plot_points[i],
+            ];
+            polygons.push(polygon);
+        }
 
-        //         plot_ui.line(line);
-        //     }
-        // }
+        for points in polygons.iter() {
+            let uncertainity_band = Polygon::new(PlotPoints::Owned(points.clone()))
+            .stroke(egui::Stroke::new(0.0, self.color))
+            .width(0.0)
+            .name(name.clone());
 
-        // if let Some(fit_line_uncertainity) = &self.fit_uncertainity_lines {
-        //     for points in fit_line_uncertainity.iter() {
-
-        //         let uncertainity_band = Polygon::new(PlotPoints::Owned(points.clone()))
-        //         .stroke(egui::Stroke::new(0.0, self.color))
-        //         .width(0.0)
-        //         .name(name.clone());
-
-        //         plot_ui.polygon(uncertainity_band);
-        //     }
-
-        // }
+            plot_ui.polygon(uncertainity_band);
+        }
     }
 
 }
