@@ -32,7 +32,7 @@ fn main() {
             .start(
                 "the_canvas_id", // hardcode it
                 web_options,
-                Box::new(|cc| Box::new(cebra_sps_eventbuilder::CeBrAEfficiencyApp::new(cc, false))),
+                Box::new(|cc| Box::new(cebra_efficiency::CeBrAEfficiencyApp::new(cc, false))),
             )
             .await
             .expect("failed to start eframe");

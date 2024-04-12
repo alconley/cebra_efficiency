@@ -94,11 +94,10 @@ impl CeBrAEfficiencyApp {
             });
         });
 
-        egui::SidePanel::left("cebra_efficiency_left_side_panel").show_inside(ui, |ui| {
-            self.measurment_handler.sources_ui(ui);
-        });
+        self.measurment_handler.ui(ui);
+        // self.measurment_handler.sources_ui(ui);
 
-        self.measurment_handler.plot(ui);
+        // self.measurment_handler.plot(ui);
     }
 }
 

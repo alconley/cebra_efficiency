@@ -399,45 +399,51 @@ impl MeasurementHandler {
         });
     }
 
-    pub fn sources_ui(&mut self, ui: &mut egui::Ui) {
-        let mut index_to_remove: Option<usize> = None;
+    pub fn ui(&mut self, ui: &mut egui::Ui) {
 
-        // Previous measurments
-        ui.horizontal(|ui| {
-            ui.label("Previous Measurements");
-            if ui.button("REU 2023").clicked() {
-                self.reu_2023_efficiency();
-            }
+        egui::TopBottomPanel::bottom("efficiency_bottom").show_inside(ui, |ui| {
+            self.fit_detectors_ui(ui);
         });
 
-        egui::ScrollArea::vertical().show(ui, |ui| {
-            ui.collapsing("Sources", |ui| {
-                for (index, measurement) in self.measurements.iter_mut().enumerate() {
-                    measurement.update_ui(ui);
+        egui::SidePanel::left("cebra_efficiency_left_side_panel").show_inside(ui, |ui| {
 
-                    if ui.button("Remove Source").clicked() {
-                        index_to_remove = Some(index);
+            let mut index_to_remove: Option<usize> = None;
+
+            // Previous measurments
+            ui.horizontal(|ui| {
+                ui.label("Previous Measurements");
+                if ui.button("REU 2023").clicked() {
+                    self.reu_2023_efficiency();
+                }
+            });
+
+            egui::ScrollArea::vertical().show(ui, |ui| {
+                ui.collapsing("Sources", |ui| {
+                    for (index, measurement) in self.measurements.iter_mut().enumerate() {
+                        measurement.update_ui(ui);
+
+                        if ui.button("Remove Source").clicked() {
+                            index_to_remove = Some(index);
+                        }
+
+                        ui.separator();
+                    }
+
+                    if let Some(index) = index_to_remove {
+                        self.remove_measurement(index);
+                    }
+
+                    if ui.button("New Source").clicked() {
+                        self.measurements.push(Measurement::new(None));
                     }
 
                     ui.separator();
-                }
-
-                if let Some(index) = index_to_remove {
-                    self.remove_measurement(index);
-                }
-
-                if ui.button("New Source").clicked() {
-                    self.measurements.push(Measurement::new(None));
-                }
-
-                ui.separator();
+                });
             });
-
-            ui.collapsing("Fitter", |ui| {
-                self.fit_detectors_ui(ui);
-            });
-
         });
+
+        self.plot(ui);
+
     }
 
 }

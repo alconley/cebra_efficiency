@@ -18,10 +18,6 @@ log = "0.4"
 # You only need serde if you want app persistence:
 serde = { version = "1", features = ["derive"] }
 
-# native:
-[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-env_logger = "0.10"
-
 egui_extras = { version = "0.27.2", features = ["datepicker"]}
 egui_plot = {version = "0.27.2", features = ["serde"] }
 chrono = { version = "0.4", features = ["serde"] }
@@ -30,10 +26,16 @@ rfd = "0.13"
 varpro = "0.8.0"
 nalgebra = "0.32.4"
 serde_yaml = "0.9.31"
+statrs = "0.16.0"
+
+# native:
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+env_logger = "0.10"
 
 # web:
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen-futures = "0.4"
+getrandom = { version = "0.2", features = ["js"] }
 
 [profile.release]
 opt-level = 2 # fast and small wasm
