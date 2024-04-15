@@ -65,7 +65,7 @@ impl GammaSource {
             source_activity_calibration: SourceActivity::default(),
             source_activity_measurement: SourceActivity::default(),
             measurement_time: 0.0,
-            marker_shape: "circle".to_string(),
+            marker_shape: "Circle".to_string(),
             marker_size: 5.0,
         }
     }
