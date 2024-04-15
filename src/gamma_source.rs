@@ -52,8 +52,7 @@ pub struct GammaSource {
     pub source_activity_measurement: SourceActivity,
     pub measurement_time: f64, // hours
 
-    #[serde(skip)]
-    pub marker_shape: Option<MarkerShape>,
+    pub marker_shape: String,
     pub marker_size: f32,
 }
 
@@ -66,7 +65,7 @@ impl GammaSource {
             source_activity_calibration: SourceActivity::default(),
             source_activity_measurement: SourceActivity::default(),
             measurement_time: 0.0,
-            marker_shape: Some(MarkerShape::Circle),
+            marker_shape: "circle".to_string(),
             marker_size: 5.0,
         }
     }
@@ -76,8 +75,7 @@ impl GammaSource {
         self.half_life = 13.517; // years
 
         self.source_activity_calibration.activity = 74.370; // kBq
-        self.source_activity_calibration.date =
-            chrono::NaiveDate::from_ymd_opt(2017, 3, 17);
+        self.source_activity_calibration.date = chrono::NaiveDate::from_ymd_opt(2017, 3, 17);
 
         self.add_gamma_line(121.7817, 28.53, 0.16);
         self.add_gamma_line(244.6974, 7.55, 0.04);
@@ -90,7 +88,6 @@ impl GammaSource {
         self.add_gamma_line(1085.837, 10.11, 0.05);
         self.add_gamma_line(1112.076, 13.67, 0.08);
         self.add_gamma_line(1408.0130, 20.87, 0.09);
-
     }
 
     pub fn fsu_56co_source(&mut self) {
@@ -100,15 +97,13 @@ impl GammaSource {
         self.half_life = co60_halflife_days / 365.25; // years
 
         self.source_activity_calibration.activity = 108.0; // kBq (arbitrary scaled to match 152Eu)
-        self.source_activity_calibration.date =
-            chrono::NaiveDate::from_ymd_opt(2022, 4, 18);
+        self.source_activity_calibration.date = chrono::NaiveDate::from_ymd_opt(2022, 4, 18);
 
         self.add_gamma_line(846.7638, 99.9399, 0.0023);
         self.add_gamma_line(1037.8333, 14.03, 0.05);
         self.add_gamma_line(1360.196, 4.283, 0.013);
         self.add_gamma_line(2598.438, 16.96, 0.04);
         self.add_gamma_line(3451.119, 0.942, 0.006);
-
     }
 
     pub fn add_gamma_line(&mut self, energy: f64, intensity: f64, intensity_uncertainty: f64) {
@@ -149,11 +144,10 @@ impl GammaSource {
         let count_uncertainity = line.uncertainty;
 
         let efficiency = counts / (intensity * source_activity * run_time * 0.01) * 100.0; // efficiency in percent
-        let efficiency_uncertainty = efficiency * 
-            (     (count_uncertainity / counts).powi(2)
+        let efficiency_uncertainty = efficiency
+            * ((count_uncertainity / counts).powi(2)
                 + (intensity_uncertainty / intensity).powi(2)
-                + (activity_uncertainty / source_activity).powi(2)
-            )
+                + (activity_uncertainty / source_activity).powi(2))
             .sqrt();
 
         line.efficiency = efficiency;
@@ -162,7 +156,6 @@ impl GammaSource {
 
     pub fn source_ui(&mut self, ui: &mut egui::Ui) {
         ui.collapsing("Source", |ui| {
-
             ui.horizontal(|ui| {
                 ui.label("FSU Sources:");
 
@@ -256,29 +249,33 @@ impl GammaSource {
                     ui.end_row();
 
                     ui.label("Marker Shape:");
-                    // combo box of all the shapes
-                    let marker_shape = self.marker_shape.unwrap();
+                    let marker_shape_names = [
+                        "Circle", "Diamond", "Square", "Cross", "Plus", "Up", "Down", "Left",
+                        "Right", "Asterisk",
+                    ];
+                    let mut selected_index = marker_shape_names
+                        .iter()
+                        .position(|&shape| shape == self.marker_shape)
+                        .unwrap_or(0);
                     let _marker_shape = egui::ComboBox::from_id_source("marker_shape")
-                        .selected_text(format!("{:?}", marker_shape))
+                        .selected_text(&self.marker_shape)
                         .show_ui(ui, |ui| {
-                            ui.selectable_value(&mut self.marker_shape, Some(MarkerShape::Circle), "Circle");
-                            ui.selectable_value(&mut self.marker_shape, Some(MarkerShape::Diamond), "Diamond");
-                            ui.selectable_value(&mut self.marker_shape, Some(MarkerShape::Square), "Square");
-                            ui.selectable_value(&mut self.marker_shape, Some(MarkerShape::Cross), "Cross");
-                            ui.selectable_value(&mut self.marker_shape, Some(MarkerShape::Plus), "Plus");
-                            ui.selectable_value(&mut self.marker_shape, Some(MarkerShape::Up), "Up");
-                            ui.selectable_value(&mut self.marker_shape, Some(MarkerShape::Down), "Down");
-                            ui.selectable_value(&mut self.marker_shape, Some(MarkerShape::Left), "Left");
-                            ui.selectable_value(&mut self.marker_shape, Some(MarkerShape::Right), "Right");
-                            ui.selectable_value(&mut self.marker_shape, Some(MarkerShape::Asterisk), "Asterisk");
+                            for (index, name) in marker_shape_names.iter().enumerate() {
+                                if ui
+                                    .selectable_value(&mut selected_index, index, *name)
+                                    .clicked()
+                                {
+                                    self.marker_shape = name.to_string();
+                                }
+                            }
                         });
 
-                        ui.add(
-                            egui::DragValue::new(&mut self.marker_size)
-                                .speed(0.1)
-                                .clamp_range(0.0..=f32::INFINITY)
-                                .prefix("Size: "),
-                        );
+                    ui.add(
+                        egui::DragValue::new(&mut self.marker_size)
+                            .speed(0.1)
+                            .clamp_range(0.0..=f32::INFINITY)
+                            .prefix("Size: "),
+                    );
 
                     ui.end_row();
                     ui.label("Energy");
@@ -318,5 +315,21 @@ impl GammaSource {
 
     pub fn remove_gamma_line(&mut self, index: usize) {
         self.gamma_lines.remove(index);
+    }
+
+    pub fn to_egui_marker_shape(&self) -> MarkerShape {
+        match self.marker_shape.as_str() {
+            "Circle" => MarkerShape::Circle,
+            "Diamond" => MarkerShape::Diamond,
+            "Square" => MarkerShape::Square,
+            "Cross" => MarkerShape::Cross,
+            "Plus" => MarkerShape::Plus,
+            "Up" => MarkerShape::Up,
+            "Down" => MarkerShape::Down,
+            "Left" => MarkerShape::Left,
+            "Right" => MarkerShape::Right,
+            "Asterisk" => MarkerShape::Asterisk,
+            _ => panic!("Invalid marker shape: {}", self.marker_shape),
+        }
     }
 }

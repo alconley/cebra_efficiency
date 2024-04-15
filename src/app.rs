@@ -1,7 +1,6 @@
 use eframe::App;
 
-use serde_yaml;
-
+use std::fs;
 use std::fs::File;
 use std::io::{Read, Write};
 
@@ -21,6 +20,20 @@ impl CeBrAEfficiencyApp {
         }
     }
 
+    fn load_previous_measurements() -> Self {
+        if let Ok(data) = fs::read_to_string("previous_measurements/REU_2023.yaml") {
+            match serde_yaml::from_str(&data) {
+                Ok(result) => result,
+                Err(err) => {
+                    eprintln!("Failed to deserialize data: {}", err);
+                    Self::default()
+                }
+            }
+        } else {
+            Self::default()
+        }
+    }
+
     #[cfg(not(target_arch = "wasm32"))]
     fn load_from_file() -> Self {
         if let Some(path) = rfd::FileDialog::new()
@@ -31,9 +44,17 @@ impl CeBrAEfficiencyApp {
             match File::open(path) {
                 Ok(mut file) => {
                     let mut data = String::new();
-                    file.read_to_string(&mut data)
-                        .expect("Failed to read data from file.");
-                    serde_yaml::from_str(&data).expect("Failed to deserialize data.")
+                    if let Err(err) = file.read_to_string(&mut data) {
+                        eprintln!("Failed to read data from file: {}", err);
+                        return Self::default();
+                    }
+                    match serde_yaml::from_str(&data) {
+                        Ok(result) => result,
+                        Err(err) => {
+                            eprintln!("Failed to deserialize data: {}", err);
+                            Self::default()
+                        }
+                    }
                 }
                 Err(e) => {
                     eprintln!("Failed to load file: {}", e);
@@ -94,10 +115,17 @@ impl CeBrAEfficiencyApp {
             });
         });
 
-        self.measurment_handler.ui(ui);
-        // self.measurment_handler.sources_ui(ui);
+        ui.vertical(|ui| {
+            ui.horizontal(|ui| {
+                ui.label("Previous Measurements");
+                if ui.button("REU 2023").clicked() {
+                    *self = Self::load_previous_measurements();
+                }
+            });
 
-        // self.measurment_handler.plot(ui);
+            self.measurment_handler.ui(ui);
+        });
+
     }
 }
 

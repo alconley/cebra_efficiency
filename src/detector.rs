@@ -115,7 +115,6 @@ impl Detector {
                 // combo box to pick the colors
                 ui.label("Color:");
                 ui.color_edit_button_srgba(&mut self.color);
-
             });
 
             for line in &mut self.lines {
