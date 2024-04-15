@@ -307,38 +307,9 @@ impl ExpFitter {
 
             let cov = fit_statistics.covariance_matrix();
 
-            let weighted_residuals = fit_statistics.weighted_residuals();
-
-            // Square the weighted residuals
-            let squared_weighted_residuals: Vec<f64> = weighted_residuals
-                .iter()
-                .map(|&residual| residual * residual)
-                .collect();
-
-            // Sum up the squared weighted residuals to get the chi-squared value
-            let chi_squared: f64 = squared_weighted_residuals.iter().sum();
-            let dof = observation_length as f64 - 4.0;
-            let rchi2 = chi_squared / dof;
-
-            let sigma = 1.0;
-
-            let prob = statrs::function::erf::erf(sigma / SQRT_2);
-
-            let t_dist = match statrs::distribution::StudentsT::new(0.0, 1.0, dof) {
-                Ok(dist) => dist.inverse_cdf((1.0 + prob) / 2.0),
-                Err(e) => {
-                    log::error!("Error creating StudentsT distribution: {:?}", e);
-                    return;
-                }
-            };
-
-            log::info!("Chi-squared: {:?}\n", chi_squared);
-            log::info!("Reduced chi-squared: {:?}\n", rchi2);
-            log::info!("Degrees of freedom: {:?}\n", dof);
-            log::info!("T-distribution value: {:?}\n", t_dist);
-
             let nonlinear_parameters = fit_result.nonlinear_parameters();
             let nonlinear_variances = fit_statistics.nonlinear_parameters_variance();
+            let n_nonlinear_parameters = nonlinear_parameters.len();
 
             let linear_coefficients = fit_result.linear_coefficients();
 
@@ -351,6 +322,42 @@ impl ExpFitter {
             };
 
             let linear_variances = fit_statistics.linear_coefficients_variance();
+            let n_linear_parameters = linear_coefficients.len();
+
+            let n_paramaters = n_nonlinear_parameters + n_linear_parameters; // total number of parameters
+
+            let weighted_residuals = fit_statistics.weighted_residuals();
+
+            // Square the weighted residuals
+            let squared_weighted_residuals: Vec<f64> = weighted_residuals
+                .iter()
+                .map(|&residual| residual * residual)
+                .collect();
+
+            // Sum up the squared weighted residuals to get the chi-squared value
+            let chi_squared: f64 = squared_weighted_residuals.iter().sum();
+            let dof = observation_length as f64 - n_paramaters as f64;
+            let rchi2 = chi_squared / dof;
+
+            let sigma = 1.0;
+            let prob = statrs::function::erf::erf(sigma / SQRT_2); // 1 sigma probability (0.682689492137)
+            // prob could also be a parameter of the function so the user can deside what level of significance they want to use
+
+            let alpha = 1.0 - prob; // significance level
+
+            // we want the two-tailed t-value t_alpha/2,dof... this will be the scale factor for the confidence interval
+            let t_value = match statrs::distribution::StudentsT::new(0.0, 1.0, dof) {
+                Ok(dist) => dist.inverse_cdf(1.0-alpha/2.0),
+                Err(e) => {
+                    log::error!("Error creating StudentsT distribution: {:?}", e);
+                    return;
+                }
+            };
+
+            log::info!("Chi-squared: {:?}\n", chi_squared);
+            log::info!("Reduced chi-squared: {:?}\n", rchi2);
+            log::info!("Degrees of freedom: {:?}\n", dof);
+            log::info!("T-value: {:?}\n", t_value);
 
             let parameter_a = linear_coefficients[0];
             let parameter_a_variance = linear_variances[0];
@@ -420,7 +427,7 @@ impl ExpFitter {
                     let dfdc = parameter_a * (x / parameter_b.powi(2)) * (-x / parameter_b).exp();
                     let dfdd = parameter_c * (x / parameter_d.powi(2)) * (-x / parameter_d).exp();
 
-                    let y = t_dist
+                    let y = t_value
                         * (rchi2
                             * (dfda * dfda * cov[0]
                                 + dfda * dfdb * cov[1]

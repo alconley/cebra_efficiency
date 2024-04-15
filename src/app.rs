@@ -21,17 +21,8 @@ impl CeBrAEfficiencyApp {
     }
 
     fn load_previous_measurements() -> Self {
-        // Get the current directory
-        let current_dir = std::env::current_dir().unwrap_or_else(|_| {
-            eprintln!("Failed to get current directory");
-            std::process::exit(1);
-        });
 
-        // Join the current directory with the path to the YAML file
-        let file_path = current_dir.join("assets").join("REU_2023.yaml");
-
-        // if let Ok(data) = fs::read_to_string("assets/REU_2023.yaml") {
-        if let Ok(data) = fs::read_to_string(file_path) {
+        if let Ok(data) = fs::read_to_string("assets/REU_2023.yaml") {
             match serde_yaml::from_str(&data) {
                 Ok(result) => result,
                 Err(err) => {
