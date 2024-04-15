@@ -125,7 +125,6 @@ impl CeBrAEfficiencyApp {
 
             self.measurment_handler.ui(ui);
         });
-
     }
 }
 
