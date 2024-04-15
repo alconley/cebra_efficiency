@@ -94,7 +94,7 @@ impl MeasurementHandler {
             // Insert if not exists
             self.measurement_exp_fits
                 .entry(name.clone())
-                .or_insert(Fitter::default());
+                .or_default();
 
             // Update Fitter with pre-computed data
             if let Some(fitter) = self.measurement_exp_fits.get_mut(name) {
