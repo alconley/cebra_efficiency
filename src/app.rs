@@ -21,7 +21,6 @@ impl CeBrAEfficiencyApp {
     }
 
     fn load_previous_measurements() -> Self {
-
         if let Ok(data) = fs::read_to_string("assets/REU_2023.yaml") {
             match serde_yaml::from_str(&data) {
                 Ok(result) => result,

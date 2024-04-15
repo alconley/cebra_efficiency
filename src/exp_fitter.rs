@@ -341,13 +341,13 @@ impl ExpFitter {
 
             let sigma = 1.0;
             let prob = statrs::function::erf::erf(sigma / SQRT_2); // 1 sigma probability (0.682689492137)
-            // prob could also be a parameter of the function so the user can deside what level of significance they want to use
+                                                                   // prob could also be a parameter of the function so the user can deside what level of significance they want to use
 
             let alpha = 1.0 - prob; // significance level
 
             // we want the two-tailed t-value t_alpha/2,dof... this will be the scale factor for the confidence interval
             let t_value = match statrs::distribution::StudentsT::new(0.0, 1.0, dof) {
-                Ok(dist) => dist.inverse_cdf(1.0-alpha/2.0),
+                Ok(dist) => dist.inverse_cdf(1.0 - alpha / 2.0),
                 Err(e) => {
                     log::error!("Error creating StudentsT distribution: {:?}", e);
                     return;
