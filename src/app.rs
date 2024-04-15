@@ -31,7 +31,7 @@ impl CeBrAEfficiencyApp {
         let file_path = current_dir.join("assets").join("REU_2023.yaml");
 
         // if let Ok(data) = fs::read_to_string("assets/REU_2023.yaml") {
-        if let Ok(data) = fs::read_to_string(&file_path) {
+        if let Ok(data) = fs::read_to_string(file_path) {
             match serde_yaml::from_str(&data) {
                 Ok(result) => result,
                 Err(err) => {
