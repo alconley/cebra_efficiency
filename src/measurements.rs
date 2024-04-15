@@ -92,9 +92,7 @@ impl MeasurementHandler {
         // Iterate over detector names
         for name in &detector_names {
             // Insert if not exists
-            self.measurement_exp_fits
-                .entry(name.clone())
-                .or_default();
+            self.measurement_exp_fits.entry(name.clone()).or_default();
 
             // Update Fitter with pre-computed data
             if let Some(fitter) = self.measurement_exp_fits.get_mut(name) {
