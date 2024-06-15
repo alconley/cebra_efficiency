@@ -237,6 +237,8 @@ impl ExpFitter {
     pub fn double_exp_fit(&mut self, initial_b_guess: f64, initial_d_guess: f64) {
         self.fit_params = None;
         self.fit_line.name = "Double Exponential Fit".to_string();
+        self.upper_uncertainity_points = Vec::new();
+        self.lower_uncertainity_points = Vec::new();
 
         let x_data = DVector::from_vec(self.x.clone());
         let y_data = DVector::from_vec(self.y.clone());
@@ -327,6 +329,7 @@ impl ExpFitter {
             let chi_squared: f64 = squared_weighted_residuals.iter().sum();
             let dof = observation_length as f64 - n_paramaters as f64;
             let rchi2 = chi_squared / dof;
+            // let rchi2 = 1.0;
 
             let sigma = 1.0;
             let prob = statrs::function::erf::erf(sigma / SQRT_2); // 1 sigma probability (0.682689492137)
@@ -383,6 +386,7 @@ impl ExpFitter {
                 parameter_d, parameter_d_uncertainity);
 
             log::info!("fit_string: {:?}\n", fit_string);
+
             self.fit_params = Some(parameters);
 
             // let min_x = self.x.iter().fold(f64::INFINITY, |a, &b| a.min(b));
@@ -410,14 +414,21 @@ impl ExpFitter {
                     // followed lmfits implementation
                     let x = start + i as f64 * step;
 
-                    let dfda = (-x / (parameter_b)).exp();
-                    let dfdb = (-x / (parameter_d)).exp();
-                    let dfdc = parameter_a * (x / parameter_b.powi(2)) * (-x / parameter_b).exp();
-                    let dfdd = parameter_c * (x / parameter_d.powi(2)) * (-x / parameter_d).exp();
+                    let parameter_a = linear_coefficients[0];
+                    let parameter_b = linear_coefficients[1];
+                    let parameter_c = nonlinear_parameters[0];
+                    let parameter_d = nonlinear_parameters[1];
 
-                    let rchi2_assume = 1.0;
+                    // y= a e^-x/c + b e^-x/d
+
+                    let dfda = (-x / (parameter_c)).exp();
+                    let dfdb = (-x / (parameter_d)).exp();
+                    let dfdc = parameter_a * (x / parameter_c.powi(2)) * (-x / parameter_c).exp();
+                    let dfdd = parameter_b * (x / parameter_d.powi(2)) * (-x / parameter_d).exp();
+                    // must force rchi2 to be 1.0
+                    let rchi2 = 1.0;
                     let y = t_value
-                        * (rchi2_assume
+                        * (rchi2
                             * (dfda * dfda * cov[0]
                                 + dfda * dfdb * cov[1]
                                 + dfda * dfdc * cov[2]
@@ -469,15 +480,15 @@ impl ExpFitter {
         if self.fit_line.draw {
             // convert the upper uncertainity points to PlotPoints
             let upper_uncertainity_plot_points: Vec<PlotPoint> = self
-            .upper_uncertainity_points
-            .iter()
-            .map(|[x, y]| PlotPoint::new(*x, *y))
-            .collect();
+                .upper_uncertainity_points
+                .iter()
+                .map(|[x, y]| PlotPoint::new(*x, *y))
+                .collect();
             let lower_uncertainity_plot_points: Vec<PlotPoint> = self
-            .lower_uncertainity_points
-            .iter()
-            .map(|[x, y]| PlotPoint::new(*x, *y))
-            .collect();
+                .lower_uncertainity_points
+                .iter()
+                .map(|[x, y]| PlotPoint::new(*x, *y))
+                .collect();
 
             // egui only supports convex polygons so i need to split the polygon into multiple.
             // So each polygon will be the two points in the upper and two in the lower
@@ -492,22 +503,22 @@ impl ExpFitter {
             let num_points = upper_uncertainity_plot_points.len() - 1;
             let mut polygons: Vec<Vec<PlotPoint>> = Vec::new();
             for i in 0..num_points {
-            let polygon = vec![
-                upper_uncertainity_plot_points[i],
-                upper_uncertainity_plot_points[i + 1],
-                lower_uncertainity_plot_points[i + 1],
-                lower_uncertainity_plot_points[i],
-            ];
-            polygons.push(polygon);
+                let polygon = vec![
+                    upper_uncertainity_plot_points[i],
+                    upper_uncertainity_plot_points[i + 1],
+                    lower_uncertainity_plot_points[i + 1],
+                    lower_uncertainity_plot_points[i],
+                ];
+                polygons.push(polygon);
             }
 
             for points in polygons.iter() {
-            let uncertainity_band = Polygon::new(PlotPoints::Owned(points.clone()))
-                .stroke(egui::Stroke::new(0.0, self.fit_line.color))
-                .highlight(false)
-                .width(0.0);
+                let uncertainity_band = Polygon::new(PlotPoints::Owned(points.clone()))
+                    .stroke(egui::Stroke::new(0.0, self.fit_line.color))
+                    .highlight(false)
+                    .width(0.0);
 
-            plot_ui.polygon(uncertainity_band);
+                plot_ui.polygon(uncertainity_band);
             }
         }
     }
@@ -555,8 +566,9 @@ impl Fitter {
                 let mut exp_fitter = ExpFitter::new(x_data, y_data, weights);
                 exp_fitter.single_exp_fit(self.initial_b_guess);
                 exp_fitter.fit_line.name = format!("{} Fit", self.name.clone());
+                exp_fitter.fit_line.color = self.exp_fitter.fit_line.color;
+                exp_fitter.fit_line.color_rgb = self.exp_fitter.fit_line.color_rgb;
                 self.exp_fitter = exp_fitter;
-
             }
 
             if ui.button("Double").clicked() {
@@ -565,6 +577,8 @@ impl Fitter {
                 let mut exp_fitter = ExpFitter::new(x_data, y_data, weights);
                 exp_fitter.double_exp_fit(self.initial_b_guess, self.initial_d_guess);
                 exp_fitter.fit_line.name = format!("{} Fit", self.name.clone());
+                exp_fitter.fit_line.color = self.exp_fitter.fit_line.color;
+                exp_fitter.fit_line.color_rgb = self.exp_fitter.fit_line.color_rgb;
                 self.exp_fitter = exp_fitter;
             }
         });
@@ -588,6 +602,4 @@ impl Fitter {
     pub fn menu_button(&mut self, ui: &mut egui::Ui) {
         self.exp_fitter.menu_button(ui);
     }
-
-
 }

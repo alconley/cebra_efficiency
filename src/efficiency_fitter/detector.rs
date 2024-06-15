@@ -145,8 +145,10 @@ impl Detector {
     pub fn draw(&mut self, plot_ui: &mut egui_plot::PlotUi) {
         self.points.points = self.get_detector_points();
 
-        for line in &self.lines {
-            line.draw_uncertainty(plot_ui, self.points.color);
+        if self.points.draw {
+            for line in &self.lines {
+                line.draw_uncertainty(plot_ui, self.points.color);
+            }
         }
 
         self.points.draw(plot_ui);

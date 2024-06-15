@@ -31,7 +31,7 @@ impl Default for EguiLine {
     fn default() -> Self {
         EguiLine {
             draw: true,
-            name_in_legend: false,
+            name_in_legend: true,
             log_y: false,
             log_x: false,
             name: "Line".to_string(),

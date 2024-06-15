@@ -190,7 +190,6 @@ impl MeasurementHandler {
     }
 
     fn context_menu(&mut self, ui: &mut egui::Ui) {
-
         self.plot_settings.menu_button(ui);
 
         for measurement in self.measurements.iter_mut() {
@@ -201,7 +200,7 @@ impl MeasurementHandler {
             fitter.menu_button(ui);
         }
     }
-    
+
     fn draw(&mut self, plot_ui: &mut egui_plot::PlotUi) {
         for measurement in self.measurements.iter_mut() {
             measurement.draw(plot_ui);
@@ -222,7 +221,7 @@ impl MeasurementHandler {
 
         plot.show(ui, |plot_ui| {
             self.draw(plot_ui);
-        })            
+        })
         .response
         .context_menu(|ui| {
             self.context_menu(ui);
@@ -230,9 +229,11 @@ impl MeasurementHandler {
     }
 
     pub fn ui(&mut self, ui: &mut egui::Ui) {
-        egui::TopBottomPanel::bottom("efficiency_bottom").show_inside(ui, |ui| {
-            self.fit_detectors_ui(ui);
-        });
+        egui::TopBottomPanel::bottom("efficiency_bottom")
+            .resizable(true)
+            .show_inside(ui, |ui| {
+                self.fit_detectors_ui(ui);
+            });
 
         egui::SidePanel::left("cebra_efficiency_left_side_panel").show_inside(ui, |ui| {
             let mut index_to_remove: Option<usize> = None;

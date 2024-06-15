@@ -25,7 +25,7 @@ impl Default for EguiPoints {
     fn default() -> Self {
         EguiPoints {
             draw: true,
-            name_in_legend: false,
+            name_in_legend: true,
             name: "Points".to_string(),
             points: vec![],
             shape: Some(MarkerShape::Circle),

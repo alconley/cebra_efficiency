@@ -49,7 +49,8 @@ pub struct GammaSource {
     pub half_life: f64, // years
     pub source_activity_calibration: SourceActivity,
     pub source_activity_measurement: SourceActivity,
-    pub measurement_time: f64, // hours
+    pub source_activity_uncertainty: f64, // percentage of measurement
+    pub measurement_time: f64,            // hours
 }
 
 impl GammaSource {
@@ -60,6 +61,7 @@ impl GammaSource {
             half_life: 0.0,
             source_activity_calibration: SourceActivity::default(),
             source_activity_measurement: SourceActivity::default(),
+            source_activity_uncertainty: 5.0,
             measurement_time: 0.0,
         }
     }
@@ -128,8 +130,11 @@ impl GammaSource {
 
     pub fn gamma_line_efficiency_from_source_measurement(&self, line: &mut DetectorLine) {
         let source_activity = self.source_activity_measurement.activity;
-        // let activity_uncertainty = source_activity * 0.05; // 5% uncertainty in activity
-        let activity_uncertainty = 0.0; // 0% uncertainty in activity
+
+        // let mut activity_uncertainty = 0.0;
+        // if let Some(source_activity_uncertainty) = self.source_activity_uncertainty {
+        let activity_uncertainty = self.source_activity_uncertainty / 100.0 * source_activity;
+        // }
 
         let run_time = self.measurement_time * 3600.0; // convert hours to seconds
         let intensity = line.intensity;
@@ -146,7 +151,6 @@ impl GammaSource {
 
         line.efficiency = efficiency;
         line.efficiency_uncertainty = efficiency_uncertainty;
-
     }
 
     pub fn source_ui(&mut self, ui: &mut egui::Ui) {
@@ -240,6 +244,15 @@ impl GammaSource {
                         "{:.0} Bq",
                         self.source_activity_measurement.activity
                     ));
+
+
+                    ui.add(
+                        egui::DragValue::new(&mut self.source_activity_uncertainty)
+                            .speed(0.1)
+                            .clamp_range(0.0..=100.0)
+                            .suffix("%")
+                            .prefix("± "),
+                    ).on_hover_text("Uncertainty in the source activity measurement as a percentage of the current measurement value");
 
                     ui.end_row();
 
