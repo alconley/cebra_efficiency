@@ -38,7 +38,7 @@ I calculate the uncertainity bands the same way pythons [lmfit](https://github.c
 
 ## Efficiency Calculation of CeBrA
 
-Before you can calculate the full-energy peak (FEP) efficiency of CeBrA, you need to have a calibrated $\gamma$ source. At FSU, we have a couple of calibrated sources ($^{60}\mathrm{Co}$, $^{152}\mathrm{Eu}$, and $^{133}\mathrm{Ba}$) as of 2024. Each source has a known activity ($A_{0}$ \[kBq=1000*disintegration/seconds]) at some date ($T_{0}$) with a specific half-life ($T_{1/2}=\frac{\mathrm{ln(2)}}{\lambda}\mathrm{[years]*\frac{365.25[days]}{[years]}}$). The app then calculates the activity of the source ($A$) on the day of the measurement ($T$) based on the radioactive decay law.
+Before you can calculate the full-energy peak (FEP) efficiency of CeBrA, you need to have a calibrated $\gamma$ source. At FSU, we have a couple of calibrated sources ($^{60}\mathrm{Co}$, $^{152}\mathrm{Eu}$, and $^{133}\mathrm{Ba}$) as of 2024. Each source has a known activity ($A_{0}[\mathrm{kBq}=1000*\frac{\mathrm{disintegration}}{\mathrm{seconds}}]) at some date ($T_{0}$) with a specific half-life ($T_{1/2}=\frac{\mathrm{ln(2)}}{\lambda}\mathrm{[years]*\frac{365.25[days]}{[years]}}$). The app then calculates the activity of the source ($A$) on the day of the measurement ($T$) based on the radioactive decay law.
 
 **Activity of Source (Radioactive Decay Law)**
 $$A(T) = A_{0} \mathrm{[Bq]} * \mathrm{Exp}[-\frac{\lambda [\mathrm{days}] }{T-T_{0}[\mathrm{days}]}] $$
