@@ -4,7 +4,7 @@ var filesToCache = [
   './index.html',
   './cebra_efficiency.js',
   './cebra_efficiency_bg.wasm',
-  './REU_2023.yaml'
+  '../etc/REU_2023.yaml'
 ];
 
 /* Start the service worker and cache all of the app's content */

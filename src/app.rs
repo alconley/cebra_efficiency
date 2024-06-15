@@ -26,6 +26,7 @@ impl CeBrAEfficiencyApp {
         }
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     fn load_previous_measurements() -> Self {
         if let Ok(data) = fs::read_to_string("etc/REU_2023.yaml") {
             match serde_yaml::from_str(&data) {
@@ -115,6 +116,10 @@ impl CeBrAEfficiencyApp {
     fn ui(&mut self, ui: &mut egui::Ui) {
         egui::TopBottomPanel::top("cebra_efficiency_top_panel").show_inside(ui, |ui| {
             egui::menu::bar(ui, |ui| {
+                egui::global_dark_light_mode_switch(ui);
+
+                ui.separator();
+
                 ui.menu_button("File", |ui| {
                     self.egui_save_and_load_file(ui);
                 });
@@ -122,6 +127,7 @@ impl CeBrAEfficiencyApp {
         });
 
         ui.vertical(|ui| {
+            #[cfg(not(target_arch = "wasm32"))]
             ui.horizontal(|ui| {
                 ui.label("Previous Measurements");
                 if ui.button("REU 2023").clicked() {

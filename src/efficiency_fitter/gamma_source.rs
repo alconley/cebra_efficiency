@@ -42,7 +42,7 @@ pub struct SourceActivity {
     pub date: Option<chrono::NaiveDate>,
 }
 
-#[derive(Default, Clone, serde::Deserialize, serde::Serialize)]
+#[derive(Clone, serde::Deserialize, serde::Serialize)]
 pub struct GammaSource {
     pub name: String,
     pub gamma_lines: Vec<GammaLine>,
@@ -51,6 +51,12 @@ pub struct GammaSource {
     pub source_activity_measurement: SourceActivity,
     pub source_activity_uncertainty: f64, // percentage of measurement
     pub measurement_time: f64,            // hours
+}
+
+impl Default for GammaSource {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl GammaSource {
