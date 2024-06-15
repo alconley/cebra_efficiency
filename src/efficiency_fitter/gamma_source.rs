@@ -1,5 +1,4 @@
 use super::detector::DetectorLine;
-use egui_plot::MarkerShape;
 
 #[derive(Default, Clone, serde::Deserialize, serde::Serialize)]
 pub struct GammaLine {
@@ -43,7 +42,7 @@ pub struct SourceActivity {
     pub date: Option<chrono::NaiveDate>,
 }
 
-#[derive(Clone, serde::Deserialize, serde::Serialize)]
+#[derive(Default, Clone, serde::Deserialize, serde::Serialize)]
 pub struct GammaSource {
     pub name: String,
     pub gamma_lines: Vec<GammaLine>,
@@ -51,9 +50,6 @@ pub struct GammaSource {
     pub source_activity_calibration: SourceActivity,
     pub source_activity_measurement: SourceActivity,
     pub measurement_time: f64, // hours
-
-    pub marker_shape: String,
-    pub marker_size: f32,
 }
 
 impl GammaSource {
@@ -65,8 +61,6 @@ impl GammaSource {
             source_activity_calibration: SourceActivity::default(),
             source_activity_measurement: SourceActivity::default(),
             measurement_time: 0.0,
-            marker_shape: "Circle".to_string(),
-            marker_size: 5.0,
         }
     }
 
@@ -152,6 +146,7 @@ impl GammaSource {
 
         line.efficiency = efficiency;
         line.efficiency_uncertainty = efficiency_uncertainty;
+
     }
 
     pub fn source_ui(&mut self, ui: &mut egui::Ui) {
@@ -248,35 +243,6 @@ impl GammaSource {
 
                     ui.end_row();
 
-                    ui.label("Marker Shape:");
-                    let marker_shape_names = [
-                        "Circle", "Diamond", "Square", "Cross", "Plus", "Up", "Down", "Left",
-                        "Right", "Asterisk",
-                    ];
-                    let mut selected_index = marker_shape_names
-                        .iter()
-                        .position(|&shape| shape == self.marker_shape)
-                        .unwrap_or(0);
-                    let _marker_shape = egui::ComboBox::from_id_source("marker_shape")
-                        .selected_text(&self.marker_shape)
-                        .show_ui(ui, |ui| {
-                            for (index, name) in marker_shape_names.iter().enumerate() {
-                                if ui
-                                    .selectable_value(&mut selected_index, index, *name)
-                                    .clicked()
-                                {
-                                    self.marker_shape = name.to_string();
-                                }
-                            }
-                        });
-
-                    ui.add(
-                        egui::DragValue::new(&mut self.marker_size)
-                            .speed(0.1)
-                            .clamp_range(0.0..=f32::INFINITY)
-                            .prefix("Size: "),
-                    );
-
                     ui.end_row();
                     ui.label("Energy");
                     ui.label("Intensity");
@@ -315,21 +281,5 @@ impl GammaSource {
 
     pub fn remove_gamma_line(&mut self, index: usize) {
         self.gamma_lines.remove(index);
-    }
-
-    pub fn to_egui_marker_shape(&self) -> MarkerShape {
-        match self.marker_shape.as_str() {
-            "Circle" => MarkerShape::Circle,
-            "Diamond" => MarkerShape::Diamond,
-            "Square" => MarkerShape::Square,
-            "Cross" => MarkerShape::Cross,
-            "Plus" => MarkerShape::Plus,
-            "Up" => MarkerShape::Up,
-            "Down" => MarkerShape::Down,
-            "Left" => MarkerShape::Left,
-            "Right" => MarkerShape::Right,
-            "Asterisk" => MarkerShape::Asterisk,
-            _ => panic!("Invalid marker shape: {}", self.marker_shape),
-        }
     }
 }

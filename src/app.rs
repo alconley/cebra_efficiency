@@ -4,7 +4,7 @@ use std::fs;
 use std::fs::File;
 use std::io::{Read, Write};
 
-use super::measurements::MeasurementHandler;
+use crate::efficiency_fitter::measurements::MeasurementHandler;
 
 #[derive(Default, serde::Deserialize, serde::Serialize)]
 pub struct CeBrAEfficiencyApp {
@@ -13,7 +13,13 @@ pub struct CeBrAEfficiencyApp {
 }
 
 impl CeBrAEfficiencyApp {
-    pub fn new(_cc: &eframe::CreationContext<'_>, window: bool) -> Self {
+    pub fn new(cc: &eframe::CreationContext<'_>, window: bool) -> Self {
+        // Load previous app state (if any).
+        // Note that you must enable the `persistence` feature for this to work.
+        if let Some(storage) = cc.storage {
+            return eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default();
+        }
+
         Self {
             measurment_handler: MeasurementHandler::new(),
             window,
@@ -129,6 +135,10 @@ impl CeBrAEfficiencyApp {
 }
 
 impl App for CeBrAEfficiencyApp {
+    fn save(&mut self, storage: &mut dyn eframe::Storage) {
+        eframe::set_value(storage, eframe::APP_KEY, self);
+    }
+
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         if self.window {
             egui::Window::new("CeBrA Efficiency").show(ctx, |ui| {

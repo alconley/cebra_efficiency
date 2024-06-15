@@ -4,7 +4,9 @@ use super::gamma_source::GammaSource;
 
 use std::collections::{HashMap, HashSet};
 
-use egui_plot::{Legend, Line, Plot, PlotPoints, Points};
+use egui_plot::Plot;
+
+use crate::egui_plot_stuff::plot_settings::EguiPlotSettings;
 
 #[derive(Clone, serde::Deserialize, serde::Serialize)]
 pub struct Measurement {
@@ -58,12 +60,28 @@ impl Measurement {
             self.measurement_ui(ui);
         });
     }
+
+    pub fn draw(&mut self, plot_ui: &mut egui_plot::PlotUi) {
+        for detector in self.detectors.iter_mut() {
+            detector.points.name = format!("{}: {}", detector.name, self.gamma_source.name);
+            detector.draw(plot_ui);
+        }
+    }
+
+    pub fn menu_button(&mut self, ui: &mut egui::Ui) {
+        ui.menu_button(format!("{} Measurement", self.gamma_source.name), |ui| {
+            for detector in self.detectors.iter_mut() {
+                detector.menu_button(ui);
+            }
+        });
+    }
 }
 
 #[derive(Default, Clone, serde::Deserialize, serde::Serialize)]
 pub struct MeasurementHandler {
     pub measurements: Vec<Measurement>,
     pub measurement_exp_fits: HashMap<String, Fitter>,
+    pub plot_settings: EguiPlotSettings,
 }
 
 impl MeasurementHandler {
@@ -71,6 +89,7 @@ impl MeasurementHandler {
         Self {
             measurements: vec![],
             measurement_exp_fits: HashMap::new(),
+            plot_settings: EguiPlotSettings::default(),
         }
     }
 
@@ -170,68 +189,43 @@ impl MeasurementHandler {
         self.measurements.remove(index);
     }
 
+    fn context_menu(&mut self, ui: &mut egui::Ui) {
+
+        self.plot_settings.menu_button(ui);
+
+        for measurement in self.measurements.iter_mut() {
+            measurement.menu_button(ui);
+        }
+
+        for (_name, fitter) in self.measurement_exp_fits.iter_mut() {
+            fitter.menu_button(ui);
+        }
+    }
+    
+    fn draw(&mut self, plot_ui: &mut egui_plot::PlotUi) {
+        for measurement in self.measurements.iter_mut() {
+            measurement.draw(plot_ui);
+        }
+
+        for (name, fitter) in self.measurement_exp_fits.iter_mut() {
+            fitter.name = name.clone();
+            fitter.draw(plot_ui);
+        }
+    }
+
     pub fn plot(&mut self, ui: &mut egui::Ui) {
-        let plot = Plot::new("Efficiency")
-            .legend(Legend::default())
-            .min_size(egui::Vec2::new(400.0, 400.0));
+        let mut plot = Plot::new("Efficiency")
+            .min_size(egui::Vec2::new(400.0, 400.0))
+            .auto_bounds(egui::Vec2b::new(true, true));
+
+        plot = self.plot_settings.apply_to_plot(plot);
 
         plot.show(ui, |plot_ui| {
-            for measurement in self.measurements.iter_mut() {
-                let marker_shape = measurement.gamma_source.to_egui_marker_shape();
-
-                let marker_size = measurement.gamma_source.marker_size;
-
-                for detector in measurement.detectors.iter_mut() {
-                    let color = detector.color;
-                    let name = format!("{}: {}", detector.name, measurement.gamma_source.name);
-
-                    let mut points: Vec<[f64; 2]> = vec![];
-                    for detector_line in &detector.lines {
-                        points.push([detector_line.energy, detector_line.efficiency]);
-                    }
-
-                    let detector_plot_points = PlotPoints::new(points);
-
-                    let detector_points = Points::new(detector_plot_points)
-                        .filled(true)
-                        .color(color)
-                        .shape(marker_shape)
-                        .radius(marker_size)
-                        .name(name.to_string());
-
-                    plot_ui.points(detector_points);
-
-                    // draw the uncertainity as vertical lines from the efficiency points
-                    for detector_line in &detector.lines {
-                        let y_err_points: Vec<[f64; 2]> = vec![
-                            [
-                                detector_line.energy,
-                                detector_line.efficiency - detector_line.efficiency_uncertainty,
-                            ],
-                            [
-                                detector_line.energy,
-                                detector_line.efficiency + detector_line.efficiency_uncertainty,
-                            ],
-                        ];
-
-                        let y_err_plot_points = PlotPoints::new(y_err_points);
-
-                        // this can be a line with the points at (x, y-yerr) and (x, y+yerr)
-                        let y_err_points = Line::new(y_err_plot_points)
-                            .color(color)
-                            .name(name.to_string());
-
-                        plot_ui.line(y_err_points);
-                    }
-                }
-            }
-
-            for (name, fitter) in self.measurement_exp_fits.iter_mut() {
-                // check to see if the exp is not none
-                if let Some(exp_fit) = &mut fitter.exp_fitter {
-                    exp_fit.draw_fit_line(plot_ui, name.clone());
-                }
-            }
+            self.draw(plot_ui);
+        })            
+        .response
+        .context_menu(|ui| {
+            self.context_menu(ui);
         });
     }
 

@@ -1,5 +1,6 @@
-use super::exp_fitter::ExpFitter;
 use super::gamma_source::GammaSource;
+
+use crate::egui_plot_stuff::egui_points::EguiPoints;
 
 #[derive(Default, Clone, serde::Deserialize, serde::Serialize)]
 pub struct DetectorLine {
@@ -30,15 +31,26 @@ impl DetectorLine {
             self.efficiency, self.efficiency_uncertainty
         ));
     }
+
+    pub fn draw_uncertainty(&self, plot_ui: &mut egui_plot::PlotUi, color: egui::Color32) {
+        let points = vec![
+            [self.energy, self.efficiency - self.efficiency_uncertainty],
+            [self.energy, self.efficiency + self.efficiency_uncertainty],
+        ];
+
+        let line = egui_plot::Line::new(points).color(color);
+
+        plot_ui.line(line);
+    }
 }
 
 #[derive(Default, Clone, serde::Deserialize, serde::Serialize)]
 pub struct Detector {
     pub name: String,
+    pub source_name: String,
     pub lines: Vec<DetectorLine>,
-    pub exp_fit: Option<ExpFitter>,
+    pub points: EguiPoints,
     pub to_remove: Option<bool>,
-    pub color: egui::Color32,
 }
 
 impl Detector {
@@ -111,10 +123,6 @@ impl Detector {
                 if ui.button("+").clicked() {
                     self.lines.push(DetectorLine::default());
                 }
-
-                // combo box to pick the colors
-                ui.label("Color:");
-                ui.color_edit_button_srgba(&mut self.color);
             });
 
             for line in &mut self.lines {
@@ -125,5 +133,26 @@ impl Detector {
 
     fn remove_line(&mut self, index: usize) {
         self.lines.remove(index);
+    }
+
+    fn get_detector_points(&self) -> Vec<[f64; 2]> {
+        self.lines
+            .iter()
+            .map(|line| [line.energy, line.efficiency])
+            .collect()
+    }
+
+    pub fn draw(&mut self, plot_ui: &mut egui_plot::PlotUi) {
+        self.points.points = self.get_detector_points();
+
+        for line in &self.lines {
+            line.draw_uncertainty(plot_ui, self.points.color);
+        }
+
+        self.points.draw(plot_ui);
+    }
+
+    pub fn menu_button(&mut self, ui: &mut egui::Ui) {
+        self.points.menu_button(ui);
     }
 }

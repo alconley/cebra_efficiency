@@ -3,7 +3,5 @@
 mod app;
 pub use app::CeBrAEfficiencyApp;
 
-mod detector;
-mod exp_fitter;
-mod gamma_source;
-mod measurements;
+mod efficiency_fitter;
+mod egui_plot_stuff;
