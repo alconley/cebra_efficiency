@@ -17,7 +17,7 @@ pub struct Measurement {
 impl Measurement {
     pub fn new(source: Option<GammaSource>) -> Self {
         Self {
-            gamma_source: source.unwrap_or(GammaSource::new()),
+            gamma_source: source.unwrap_or_default(),
             detectors: vec![],
         }
     }
@@ -116,7 +116,7 @@ impl MeasurementHandler {
             // Update Fitter with pre-computed data
             if let Some(fitter) = self.measurement_exp_fits.get_mut(name) {
                 if let Some(data) = detector_data.get(name) {
-                    fitter.name = name.clone();
+                    fitter.name.clone_from(name);
                     fitter.data = data.clone();
                 }
             }
@@ -177,7 +177,7 @@ impl MeasurementHandler {
                     ui.end_row();
 
                     for (name, fitter) in &mut self.measurement_exp_fits {
-                        fitter.name = name.clone();
+                        fitter.name.clone_from(name);
                         fitter.ui(ui);
                         ui.end_row();
                     }
@@ -207,7 +207,7 @@ impl MeasurementHandler {
         }
 
         for (name, fitter) in self.measurement_exp_fits.iter_mut() {
-            fitter.name = name.clone();
+            fitter.name.clone_from(name);
             fitter.draw(plot_ui);
         }
     }

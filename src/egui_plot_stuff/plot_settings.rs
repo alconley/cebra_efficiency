@@ -79,12 +79,10 @@ impl EguiPlotSettings {
             .show_background(self.show_background)
             .auto_bounds(egui::Vec2b::new(true, true));
 
-        let plot = if self.legend {
+        if self.legend {
             plot.legend(egui_plot::Legend::default())
         } else {
             plot
-        };
-
-        plot
+        }
     }
 }
