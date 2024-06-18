@@ -1,7 +1,7 @@
 var cacheName = 'egui-template-pwa';
 var filesToCache = [
   './',
-  './index.html',
+  './index.html#dev',
   './cebra_efficiency.js',
   './cebra_efficiency_bg.wasm',
   '../etc/REU_2023.yaml'

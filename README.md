@@ -2,7 +2,7 @@
 
 Easily calculate the full-energy peak (FEP) efficiency of the CeBr3 Array (CeBrA) with this app.  
 
-### Testing Locally
+### Running Locally
 
 Make sure you are using the latest version of stable Rust by running `rustup update`. Rust is very easy to install on any computer. First, you'll need to install the Rust toolchain (compiler, cargo, etc.). Go to the [Rust website](https://www.rust-lang.org/tools/install) and follow the instructions there.
 
@@ -16,13 +16,14 @@ On Fedora Rawhide, you need to run:
 
 `dnf install clang clang-devel clang-tools-extra libxkbcommon-devel pkg-config openssl-devel libxcb-devel gtk3-devel atk fontconfig-devel`
 
-### Web Application
-
-The application can be run online [here](https://alconley.github.io/cebra_efficiency/). Note that saving and loading are not currently available here.
-
 ### Example
 
-A previous measurment (from the REU in 2023 with 5 CeBr3 detectors) button is located on the top panel.
+A previous measurment (from the REU in 2023 with 5 CeBr3 detectors) button is located on the top panel when running locally. This button loads the file at etc/REU_2023.yaml.
+
+### Web Application
+
+The application can be run online [here](https://alconley.github.io/cebra_efficiency/). Files can be
+saved (downloaded) and re-loaded back in... straight from the web! For an example, download the file in the etc direction (REU_2023.yaml).
 
 ### Other
 
