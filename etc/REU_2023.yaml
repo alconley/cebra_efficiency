@@ -31585,3 +31585,5 @@ measurment_handler:
     sharp_grid_lines: true
     show_background: true
 window: false
+show_left_panel: false
+show_bottom_panel: false

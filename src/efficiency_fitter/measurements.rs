@@ -190,15 +190,25 @@ impl MeasurementHandler {
     }
 
     fn context_menu(&mut self, ui: &mut egui::Ui) {
-        self.plot_settings.menu_button(ui);
+        egui::ScrollArea::vertical().show(ui, |ui| {
+            ui.heading("Context Menu");
 
-        for measurement in self.measurements.iter_mut() {
-            measurement.menu_button(ui);
-        }
+            self.plot_settings.menu_button(ui);
 
-        for (_name, fitter) in self.measurement_exp_fits.iter_mut() {
-            fitter.menu_button(ui);
-        }
+            ui.separator();
+
+            for measurement in self.measurements.iter_mut() {
+                measurement.menu_button(ui);
+            }
+
+            ui.separator();
+
+            for (name, fitter) in self.measurement_exp_fits.iter_mut() {
+                ui.collapsing(format!("{} Fitter", name), |ui| {
+                    fitter.menu_button(ui);
+                });
+            }
+        });
     }
 
     fn draw(&mut self, plot_ui: &mut egui_plot::PlotUi) {
@@ -228,40 +238,44 @@ impl MeasurementHandler {
         });
     }
 
-    pub fn ui(&mut self, ui: &mut egui::Ui) {
+    pub fn ui(&mut self, ui: &mut egui::Ui, show_bottom_panel: bool, show_left_panel: bool) {
         egui::TopBottomPanel::bottom("efficiency_bottom")
             .resizable(true)
-            .show_inside(ui, |ui| {
+            .show_animated_inside(ui, show_bottom_panel, |ui| {
                 self.fit_detectors_ui(ui);
             });
 
-        egui::SidePanel::left("cebra_efficiency_left_side_panel").show_inside(ui, |ui| {
-            let mut index_to_remove: Option<usize> = None;
+        egui::SidePanel::left("cebra_efficiency_left_side_panel").show_animated_inside(
+            ui,
+            show_left_panel,
+            |ui| {
+                let mut index_to_remove: Option<usize> = None;
 
-            egui::ScrollArea::vertical().show(ui, |ui| {
-                ui.collapsing("Sources", |ui| {
-                    for (index, measurement) in self.measurements.iter_mut().enumerate() {
-                        measurement.update_ui(ui);
+                egui::ScrollArea::vertical().show(ui, |ui| {
+                    ui.collapsing("Sources", |ui| {
+                        for (index, measurement) in self.measurements.iter_mut().enumerate() {
+                            measurement.update_ui(ui);
 
-                        if ui.button("Remove Source").clicked() {
-                            index_to_remove = Some(index);
+                            if ui.button("Remove Source").clicked() {
+                                index_to_remove = Some(index);
+                            }
+
+                            ui.separator();
+                        }
+
+                        if let Some(index) = index_to_remove {
+                            self.remove_measurement(index);
+                        }
+
+                        if ui.button("New Source").clicked() {
+                            self.measurements.push(Measurement::new(None));
                         }
 
                         ui.separator();
-                    }
-
-                    if let Some(index) = index_to_remove {
-                        self.remove_measurement(index);
-                    }
-
-                    if ui.button("New Source").clicked() {
-                        self.measurements.push(Measurement::new(None));
-                    }
-
-                    ui.separator();
+                    });
                 });
-            });
-        });
+            },
+        );
 
         self.plot(ui);
     }

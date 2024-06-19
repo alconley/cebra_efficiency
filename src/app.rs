@@ -12,10 +12,12 @@ use std::sync::mpsc::{channel, Receiver, Sender};
 
 use crate::efficiency_fitter::measurements::MeasurementHandler;
 
-#[derive(Default, serde::Deserialize, serde::Serialize)]
+#[derive(serde::Deserialize, serde::Serialize)]
 pub struct CeBrAEfficiencyApp {
     measurment_handler: MeasurementHandler,
     window: bool,
+    show_left_panel: bool,
+    show_bottom_panel: bool,
     #[cfg(target_arch = "wasm32")]
     #[serde(skip)]
     file_channel: Option<(Sender<String>, Receiver<String>)>,
@@ -24,23 +26,28 @@ pub struct CeBrAEfficiencyApp {
     filename: String,
 }
 
+impl Default for CeBrAEfficiencyApp {
+    fn default() -> Self {
+        Self {
+            measurment_handler: MeasurementHandler::new(),
+            window: false,
+            show_left_panel: true,
+            show_bottom_panel: true,
+            #[cfg(target_arch = "wasm32")]
+            file_channel: None,
+            #[cfg(target_arch = "wasm32")]
+            filename: String::new(),
+        }
+    }
+}
+
 impl CeBrAEfficiencyApp {
     pub fn new(cc: &eframe::CreationContext<'_>, window: bool) -> Self {
-        // Load previous app state (if any).
-        // Note that you must enable the `persistence` feature for this to work.
-        // if let Some(storage) = cc.storage {
-        //     return eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default();
-        // }
-
-        // Self {
-        //     measurment_handler: MeasurementHandler::new(),
-        //     window,
-        //     file_channel: None,
-        // }
-
         let mut app = Self {
             measurment_handler: MeasurementHandler::new(),
             window,
+            show_left_panel: true,
+            show_bottom_panel: true,
             #[cfg(target_arch = "wasm32")]
             file_channel: None,
             #[cfg(target_arch = "wasm32")]
@@ -237,8 +244,14 @@ impl CeBrAEfficiencyApp {
                 ui.separator();
 
                 ui.menu_button("File", |ui| {
-                    // self.handle_loaded_file(ui);
                     self.egui_save_and_load_file(ui);
+                });
+
+                ui.separator();
+
+                ui.menu_button("Panels", |ui| {
+                    ui.checkbox(&mut self.show_left_panel, "Measurement Panel");
+                    ui.checkbox(&mut self.show_bottom_panel, "Fitting Panel");
                 });
             });
         });
@@ -252,7 +265,8 @@ impl CeBrAEfficiencyApp {
                 }
             });
 
-            self.measurment_handler.ui(ui);
+            self.measurment_handler
+                .ui(ui, self.show_bottom_panel, self.show_left_panel);
         });
     }
 }
@@ -275,10 +289,12 @@ impl App for CeBrAEfficiencyApp {
     }
 }
 
+#[cfg(target_arch = "wasm32")]
 trait ReplaceWith {
     fn replace_with(&mut self, other: Self);
 }
 
+#[cfg(target_arch = "wasm32")]
 impl ReplaceWith for CeBrAEfficiencyApp {
     fn replace_with(&mut self, other: Self) {
         *self = other;

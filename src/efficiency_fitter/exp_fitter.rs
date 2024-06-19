@@ -560,27 +560,8 @@ impl Fitter {
         });
 
         ui.horizontal(|ui| {
-            if ui.button("Single").clicked() {
-                let (x_data, y_data, weights) = self.data.clone();
-
-                let mut exp_fitter = ExpFitter::new(x_data, y_data, weights);
-                exp_fitter.single_exp_fit(self.initial_b_guess);
-                exp_fitter.fit_line.name = format!("{} Fit", self.name.clone());
-                exp_fitter.fit_line.color = self.exp_fitter.fit_line.color;
-                exp_fitter.fit_line.color_rgb = self.exp_fitter.fit_line.color_rgb;
-                self.exp_fitter = exp_fitter;
-            }
-
-            if ui.button("Double").clicked() {
-                let (x_data, y_data, weights) = self.data.clone();
-
-                let mut exp_fitter = ExpFitter::new(x_data, y_data, weights);
-                exp_fitter.double_exp_fit(self.initial_b_guess, self.initial_d_guess);
-                exp_fitter.fit_line.name = format!("{} Fit", self.name.clone());
-                exp_fitter.fit_line.color = self.exp_fitter.fit_line.color;
-                exp_fitter.fit_line.color_rgb = self.exp_fitter.fit_line.color_rgb;
-                self.exp_fitter = exp_fitter;
-            }
+            self.single_exp_fit_button(ui);
+            self.double_exp_fit_button(ui);
         });
 
         ui.label("Parameters:");
@@ -595,11 +576,83 @@ impl Fitter {
         }
     }
 
+    pub fn single_exp_fit_button(&mut self, ui: &mut egui::Ui) {
+        if ui.button("Single").on_hover_text("Fit the data with a single exponential fit. Uses parameter b for the initial guess").clicked() {
+            let (x_data, y_data, weights) = self.data.clone();
+
+            let mut exp_fitter = ExpFitter::new(x_data, y_data, weights);
+            exp_fitter.single_exp_fit(self.initial_b_guess);
+            exp_fitter.fit_line.name = format!("{} Fit", self.name.clone());
+            exp_fitter.fit_line.color = self.exp_fitter.fit_line.color;
+            exp_fitter.fit_line.color_rgb = self.exp_fitter.fit_line.color_rgb;
+            self.exp_fitter = exp_fitter;
+        }
+    }
+
+    pub fn double_exp_fit_button(&mut self, ui: &mut egui::Ui) {
+        if ui.button("Double").on_hover_text("Fit the data with a double exponential fit. Uses parameter b and d for the initial guess").clicked() {
+            let (x_data, y_data, weights) = self.data.clone();
+
+            let mut exp_fitter = ExpFitter::new(x_data, y_data, weights);
+            exp_fitter.double_exp_fit(self.initial_b_guess, self.initial_d_guess);
+            exp_fitter.fit_line.name = format!("{} Fit", self.name.clone());
+            exp_fitter.fit_line.color = self.exp_fitter.fit_line.color;
+            exp_fitter.fit_line.color_rgb = self.exp_fitter.fit_line.color_rgb;
+            self.exp_fitter = exp_fitter;
+        }
+    }
+
     pub fn draw(&self, plot_ui: &mut PlotUi) {
         self.exp_fitter.draw(plot_ui);
     }
 
     pub fn menu_button(&mut self, ui: &mut egui::Ui) {
         self.exp_fitter.menu_button(ui);
+
+        ui.separator();
+
+        ui.horizontal(|ui| {
+            ui.label("Initial Guesses:");
+            ui.label("y = a * exp(-x / b) + c * exp(-x / d)");
+
+            ui.add(
+                egui::DragValue::new(&mut self.initial_b_guess)
+                    .prefix("b: ")
+                    .speed(100.0)
+                    .clamp_range(0.0..=f64::INFINITY),
+            );
+            ui.add(
+                egui::DragValue::new(&mut self.initial_d_guess)
+                    .prefix("d: ")
+                    .speed(100.0)
+                    .clamp_range(0.0..=f64::INFINITY),
+            );
+        });
+
+        ui.separator();
+
+        ui.horizontal(|ui| {
+            self.single_exp_fit_button(ui);
+            self.double_exp_fit_button(ui);
+        });
+
+        ui.separator();
+
+        ui.label("Parameters:");
+
+        // Display fit parameters
+        if let Some(fit_params) = &self.exp_fitter.fit_params {
+            for (index, ((a, a_uncertainty), (b, b_uncertainty))) in fit_params.iter().enumerate() {
+                if index == 0 {
+                    ui.label(format!("a: {:.5} ± {:.5}", a, a_uncertainty));
+                    ui.label(format!("b: {:.5} ± {:.5}", b, b_uncertainty));
+                } else {
+                    ui.label(format!("c: {:.5} ± {:.5}", a, a_uncertainty));
+                    ui.label(format!("d: {:.5} ± {:.5}", b, b_uncertainty));
+                }
+            }
+        }
+
+        ui.separator();
     }
 }
