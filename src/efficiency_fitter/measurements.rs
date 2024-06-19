@@ -64,7 +64,7 @@ impl Measurement {
     pub fn draw(&mut self, plot_ui: &mut egui_plot::PlotUi) {
         for detector in self.detectors.iter_mut() {
             let name = format!("{}: {}", detector.name, self.gamma_source.name);
-            detector.points.name = name.clone();
+            detector.points.name.clone_from(&name);
             detector.draw(plot_ui, Some(name));
         }
     }
