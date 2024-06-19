@@ -7,8 +7,8 @@ use std::fs::File;
 #[cfg(not(target_arch = "wasm32"))]
 use std::io::{Read, Write};
 
+#[cfg(target_arch = "wasm32")]
 use std::sync::mpsc::{channel, Receiver, Sender};
-// use std::future::Future;
 
 use crate::efficiency_fitter::measurements::MeasurementHandler;
 
@@ -16,6 +16,7 @@ use crate::efficiency_fitter::measurements::MeasurementHandler;
 pub struct CeBrAEfficiencyApp {
     measurment_handler: MeasurementHandler,
     window: bool,
+    #[cfg(target_arch = "wasm32")]
     #[serde(skip)]
     file_channel: Option<(Sender<String>, Receiver<String>)>,
     #[cfg(target_arch = "wasm32")]
@@ -40,6 +41,7 @@ impl CeBrAEfficiencyApp {
         let mut app = Self {
             measurment_handler: MeasurementHandler::new(),
             window,
+            #[cfg(target_arch = "wasm32")]
             file_channel: None,
             #[cfg(target_arch = "wasm32")]
             filename: String::new(),
@@ -49,7 +51,11 @@ impl CeBrAEfficiencyApp {
             app = eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default();
         }
 
-        app.file_channel = Some(channel());
+        #[cfg(target_arch = "wasm32")]
+        if app.file_channel.is_none() {
+            app.file_channel = Some(channel());
+        }
+
         app
     }
 
@@ -102,8 +108,6 @@ impl CeBrAEfficiencyApp {
 
     #[cfg(target_arch = "wasm32")]
     fn load_from_file_wasm(&self, ui: &mut egui::Ui) {
-        use wasm_bindgen_futures::spawn_local;
-
         if ui.button("Load").clicked() {
             if let Some((sender, _)) = &self.file_channel {
                 let sender = sender.clone();
@@ -113,7 +117,7 @@ impl CeBrAEfficiencyApp {
                     .pick_file();
 
                 let ctx = ui.ctx().clone();
-                spawn_local(async move {
+                wasm_bindgen_futures::spawn_local(async move {
                     if let Some(file) = task.await {
                         let data = file.read().await;
                         let _ = sender.send(String::from_utf8_lossy(&data).to_string());
@@ -186,14 +190,19 @@ impl CeBrAEfficiencyApp {
         });
     }
 
-    fn handle_loaded_file(&mut self) {
+    #[cfg(target_arch = "wasm32")]
+    fn handle_loaded_file(&mut self, ui: &mut egui::Ui) {
+        // need this otherwise, you can only load something once
+        if self.file_channel.is_none() {
+            self.file_channel = Some(channel());
+        }
+
         if let Some((_, receiver)) = &self.file_channel {
             if let Ok(data) = receiver.try_recv() {
                 if let Ok(result) = serde_yaml::from_str(&data) {
                     self.replace_with(result);
-                    eprintln!("File loaded successfully and state updated.");
                 } else {
-                    eprintln!("Failed to deserialize data");
+                    ui.label("Failed to deserialize data");
                 }
             }
         }
@@ -214,6 +223,7 @@ impl CeBrAEfficiencyApp {
 
         #[cfg(target_arch = "wasm32")]
         {
+            self.handle_loaded_file(ui);
             self.load_from_file_wasm(ui);
             self.save_to_file_wasm(ui);
         }
@@ -226,8 +236,8 @@ impl CeBrAEfficiencyApp {
 
                 ui.separator();
 
-                self.handle_loaded_file();
                 ui.menu_button("File", |ui| {
+                    // self.handle_loaded_file(ui);
                     self.egui_save_and_load_file(ui);
                 });
             });
@@ -274,14 +284,3 @@ impl ReplaceWith for CeBrAEfficiencyApp {
         *self = other;
     }
 }
-
-// #[cfg(not(target_arch = "wasm32"))]
-// fn execute<F: Future<Output = ()> + Send + 'static>(f: F) {
-//     // this is stupid... use any executor of your choice instead
-//     std::thread::spawn(move || futures::executor::block_on(f));
-// }
-
-// #[cfg(target_arch = "wasm32")]
-// fn execute<F: Future<Output = ()> + 'static>(f: F) {
-//     wasm_bindgen_futures::spawn_local(f);
-// }
