@@ -607,13 +607,14 @@ impl Fitter {
     }
 
     pub fn menu_button(&mut self, ui: &mut egui::Ui) {
-        self.exp_fitter.menu_button(ui);
-
+        ui.separator();
+        ui.horizontal(|ui| {
+            ui.label("y = a exp(-x/b) + c exp(-x/d)");
+        });
         ui.separator();
 
         ui.horizontal(|ui| {
             ui.label("Initial Guesses:");
-            ui.label("y = a * exp(-x / b) + c * exp(-x / d)");
 
             ui.add(
                 egui::DragValue::new(&mut self.initial_b_guess)
@@ -652,6 +653,10 @@ impl Fitter {
                 }
             }
         }
+
+        ui.separator();
+
+        self.exp_fitter.menu_button(ui);
 
         ui.separator();
     }
