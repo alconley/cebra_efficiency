@@ -32,13 +32,22 @@ impl DetectorLine {
         ));
     }
 
-    pub fn draw_uncertainty(&self, plot_ui: &mut egui_plot::PlotUi, color: egui::Color32) {
+    pub fn draw_uncertainty(
+        &self,
+        plot_ui: &mut egui_plot::PlotUi,
+        color: egui::Color32,
+        name: Option<String>,
+    ) {
         let points = vec![
             [self.energy, self.efficiency - self.efficiency_uncertainty],
             [self.energy, self.efficiency + self.efficiency_uncertainty],
         ];
 
-        let line = egui_plot::Line::new(points).color(color);
+        let mut line = egui_plot::Line::new(points).color(color);
+
+        if let Some(name) = name {
+            line = line.name(name);
+        }
 
         plot_ui.line(line);
     }
@@ -142,12 +151,12 @@ impl Detector {
             .collect()
     }
 
-    pub fn draw(&mut self, plot_ui: &mut egui_plot::PlotUi) {
+    pub fn draw(&mut self, plot_ui: &mut egui_plot::PlotUi, name: Option<String>) {
         self.points.points = self.get_detector_points();
 
         if self.points.draw {
             for line in &self.lines {
-                line.draw_uncertainty(plot_ui, self.points.color);
+                line.draw_uncertainty(plot_ui, self.points.color, name.clone());
             }
         }
 

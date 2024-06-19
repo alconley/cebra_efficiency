@@ -516,7 +516,8 @@ impl ExpFitter {
                 let uncertainity_band = Polygon::new(PlotPoints::Owned(points.clone()))
                     .stroke(egui::Stroke::new(0.0, self.fit_line.color))
                     .highlight(false)
-                    .width(0.0);
+                    .width(0.0)
+                    .name(self.fit_line.name.clone());
 
                 plot_ui.polygon(uncertainity_band);
             }
