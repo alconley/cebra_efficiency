@@ -108,6 +108,17 @@ impl GammaSource {
         self.add_gamma_line(3451.119, 0.942, 0.006);
     }
 
+    pub fn fsu_60co_source(&mut self) {
+        self.name = "60Co".to_string();
+        self.half_life = 5.2714; // years
+
+        self.source_activity_calibration.activity = 185.3; // kBq
+        self.source_activity_calibration.date = chrono::NaiveDate::from_ymd_opt(2018, 9, 1);
+
+        self.add_gamma_line(1173.22, 99.85, 0.03);
+        self.add_gamma_line(1332.492, 99.9826, 0.0006);
+    }
+
     pub fn add_gamma_line(&mut self, energy: f64, intensity: f64, intensity_uncertainty: f64) {
         let gamma_line = GammaLine {
             energy,
@@ -166,6 +177,10 @@ impl GammaSource {
 
                 if ui.button("152Eu").clicked() {
                     self.fsu_152eu_source();
+                }
+
+                if ui.button("60Co").clicked() {
+                    self.fsu_60co_source();
                 }
 
                 if ui.button("56Co").clicked() {
