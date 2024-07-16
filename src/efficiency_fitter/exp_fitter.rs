@@ -549,14 +549,14 @@ impl Fitter {
                 egui::DragValue::new(&mut self.initial_b_guess)
                     .prefix("b: ")
                     .speed(10.0)
-                    .clamp_range(0.0..=f64::INFINITY),
+                    .range(0.0..=f64::INFINITY),
             );
 
             ui.add(
                 egui::DragValue::new(&mut self.initial_d_guess)
                     .prefix("d: ")
                     .speed(10.0)
-                    .clamp_range(0.0..=f64::INFINITY),
+                    .range(0.0..=f64::INFINITY),
             );
         });
 
@@ -621,13 +621,13 @@ impl Fitter {
                 egui::DragValue::new(&mut self.initial_b_guess)
                     .prefix("b: ")
                     .speed(100.0)
-                    .clamp_range(0.0..=f64::INFINITY),
+                    .range(0.0..=f64::INFINITY),
             );
             ui.add(
                 egui::DragValue::new(&mut self.initial_d_guess)
                     .prefix("d: ")
                     .speed(100.0)
-                    .clamp_range(0.0..=f64::INFINITY),
+                    .range(0.0..=f64::INFINITY),
             );
         });
 

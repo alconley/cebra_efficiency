@@ -63,7 +63,7 @@ impl EguiPlotSettings {
     }
 
     // some function i can call that adds the settings to the plot
-    pub fn apply_to_plot(&self, plot: egui_plot::Plot) -> egui_plot::Plot {
+    pub fn apply_to_plot<'a>(&mut self, plot: egui_plot::Plot<'a>) -> egui_plot::Plot<'a> {
         let plot = plot
             .show_x(self.show_x_value)
             .show_y(self.show_y_value)

@@ -16,21 +16,21 @@ impl GammaLine {
         ui.add(
             egui::DragValue::new(&mut self.energy)
                 .speed(1.0)
-                .clamp_range(0.0..=f64::INFINITY)
+                .range(0.0..=f64::INFINITY)
                 .suffix(" keV"),
         );
 
         ui.add(
             egui::DragValue::new(&mut self.intensity)
                 .speed(1)
-                .clamp_range(0.0..=100.0)
+                .range(0.0..=100.0)
                 .suffix("%"),
         );
 
         ui.add(
             egui::DragValue::new(&mut self.intensity_uncertainty)
                 .speed(0.1)
-                .clamp_range(0.0..=100.0)
+                .range(0.0..=100.0)
                 .suffix("%"),
         );
     }
@@ -186,7 +186,7 @@ impl GammaSource {
                     ui.add(
                         egui::DragValue::new(&mut self.half_life)
                             .speed(0.1)
-                            .clamp_range(0.0..=f64::INFINITY)
+                            .range(0.0..=f64::INFINITY)
                             .suffix(" years"),
                     );
 
@@ -210,7 +210,7 @@ impl GammaSource {
                     ui.add(
                         egui::DragValue::new(&mut self.source_activity_calibration.activity)
                             .speed(1.0)
-                            .clamp_range(0.0..=f64::INFINITY)
+                            .range(0.0..=f64::INFINITY)
                             .suffix(" kBq"),
                     );
 
@@ -234,7 +234,7 @@ impl GammaSource {
                     ui.add(
                         egui::DragValue::new(&mut self.measurement_time)
                             .speed(0.5)
-                            .clamp_range(0.0..=f64::INFINITY)
+                            .range(0.0..=f64::INFINITY)
                             .suffix(" hours"),
                     );
 
@@ -255,7 +255,7 @@ impl GammaSource {
                     ui.add(
                         egui::DragValue::new(&mut self.source_activity_uncertainty)
                             .speed(0.1)
-                            .clamp_range(0.0..=100.0)
+                            .range(0.0..=100.0)
                             .suffix("%")
                             .prefix("± "),
                     ).on_hover_text("Uncertainty in the source activity measurement as a percentage of the current measurement value");

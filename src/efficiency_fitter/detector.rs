@@ -18,12 +18,12 @@ impl DetectorLine {
         ui.add(
             egui::DragValue::new(&mut self.count)
                 .speed(1.0)
-                .clamp_range(0.0..=f64::INFINITY),
+                .range(0.0..=f64::INFINITY),
         );
         ui.add(
             egui::DragValue::new(&mut self.uncertainty)
                 .speed(1.0)
-                .clamp_range(0.0..=f64::INFINITY),
+                .range(0.0..=f64::INFINITY),
         );
 
         ui.label(format!(

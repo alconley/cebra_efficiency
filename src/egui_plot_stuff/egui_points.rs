@@ -151,17 +151,17 @@ impl EguiPoints {
             ui.label("RGB: ");
             ui.add(
                 DragValue::new(&mut self.color_rgb.r)
-                    .clamp_range(0..=255)
+                    .range(0..=255)
                     .prefix("R: "),
             );
             ui.add(
                 DragValue::new(&mut self.color_rgb.g)
-                    .clamp_range(0..=255)
+                    .range(0..=255)
                     .prefix("G: "),
             );
             ui.add(
                 DragValue::new(&mut self.color_rgb.b)
-                    .clamp_range(0..=255)
+                    .range(0..=255)
                     .prefix("B: "),
             );
 
