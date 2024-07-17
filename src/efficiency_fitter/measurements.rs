@@ -6,7 +6,7 @@ use std::collections::{HashMap, HashSet};
 
 use egui_plot::Plot;
 
-use crate::egui_plot_stuff::plot_settings::EguiPlotSettings;
+use crate::egui_plot_stuff::{egui_line::EguiLine, plot_settings::EguiPlotSettings};
 
 #[derive(Clone, serde::Deserialize, serde::Serialize)]
 pub struct Measurement {
@@ -84,11 +84,81 @@ impl Measurement {
     }
 }
 
+#[derive(Clone, serde::Deserialize, serde::Serialize)]
+pub struct SummedEfficiency {
+    pub line: EguiLine,
+    pub uncertainty: Vec<f64>,
+    pub uncertainty_lower_points: Vec<[f64; 2]>,
+    pub uncertainty_upper_points: Vec<[f64; 2]>,
+    pub max_energy: f64,
+}
+
+impl SummedEfficiency {
+    pub fn new() -> Self {
+        let mut line = EguiLine::new(egui::Color32::RED);
+        line.name = "Summed Efficiency".to_string();
+
+        Self {
+            line,
+            uncertainty: vec![],
+            uncertainty_lower_points: vec![],
+            uncertainty_upper_points: vec![],
+            max_energy: 0.0,
+        }
+    }
+
+    pub fn draw(&mut self, plot_ui: &mut egui_plot::PlotUi) {
+        self.line.draw(plot_ui);
+
+        if self.line.draw {
+            let upper_uncertainity_plot_points: Vec<egui_plot::PlotPoint> = self
+                .uncertainty_upper_points
+                .iter()
+                .map(|[x, y]| egui_plot::PlotPoint::new(*x, *y))
+                .collect();
+            let lower_uncertainity_plot_points: Vec<egui_plot::PlotPoint> = self
+                .uncertainty_lower_points
+                .iter()
+                .map(|[x, y]| egui_plot::PlotPoint::new(*x, *y))
+                .collect();
+
+            // check is number of points is the greater than 4
+            if upper_uncertainity_plot_points.len() < 2 {
+                return;
+            }
+
+            let num_points = upper_uncertainity_plot_points.len() - 1;
+            let mut polygons: Vec<Vec<egui_plot::PlotPoint>> = Vec::new();
+            for i in 0..num_points {
+                let polygon = vec![
+                    upper_uncertainity_plot_points[i],
+                    upper_uncertainity_plot_points[i + 1],
+                    lower_uncertainity_plot_points[i + 1],
+                    lower_uncertainity_plot_points[i],
+                ];
+                polygons.push(polygon);
+            }
+
+            for points in polygons.iter() {
+                let uncertainity_band =
+                    egui_plot::Polygon::new(egui_plot::PlotPoints::Owned(points.clone()))
+                        .stroke(egui::Stroke::new(0.0, self.line.color))
+                        .highlight(false)
+                        .width(0.0)
+                        .name(self.line.name.clone());
+
+                plot_ui.polygon(uncertainity_band);
+            }
+        }
+    }
+}
+
 #[derive(Default, Clone, serde::Deserialize, serde::Serialize)]
 pub struct MeasurementHandler {
     pub measurements: Vec<Measurement>,
     pub measurement_exp_fits: HashMap<String, Fitter>,
     pub plot_settings: EguiPlotSettings,
+    pub summed_efficiency: Option<SummedEfficiency>,
 }
 
 impl MeasurementHandler {
@@ -97,6 +167,7 @@ impl MeasurementHandler {
             measurements: vec![],
             measurement_exp_fits: HashMap::new(),
             plot_settings: EguiPlotSettings::default(),
+            summed_efficiency: None,
         }
     }
 
@@ -215,6 +286,39 @@ impl MeasurementHandler {
                     fitter.menu_button(ui);
                 });
             }
+
+            ui.separator();
+
+            if self.summed_efficiency.is_none()
+                && ui.button("Add Summing Efficiency Plot").clicked()
+            {
+                self.summed_efficiency = Some(SummedEfficiency::new());
+            }
+
+            if let Some(summed_efficiency) = &mut self.summed_efficiency {
+                if ui.button("Sum Efficiency Fits").clicked() {
+                    let max_range = summed_efficiency.max_energy;
+                    self.get_summed_efficiency(max_range);
+                }
+            }
+
+            if let Some(summed_efficiency) = &mut self.summed_efficiency {
+                ui.add(
+                    egui::DragValue::new(&mut summed_efficiency.max_energy)
+                        .speed(1.0)
+                        .clamp_range(0.0..=10000.0)
+                        .prefix("Max Energy: ")
+                        .suffix(" keV"),
+                );
+            }
+
+            if let Some(summed_efficiency) = &mut self.summed_efficiency {
+                summed_efficiency.line.menu_button(ui);
+
+                if ui.button("Clear Summed Efficiency").clicked() {
+                    self.summed_efficiency = None;
+                }
+            }
         });
     }
 
@@ -226,6 +330,10 @@ impl MeasurementHandler {
         for (name, fitter) in self.measurement_exp_fits.iter_mut() {
             fitter.name.clone_from(name);
             fitter.draw(plot_ui);
+        }
+
+        if let Some(summed_efficiency) = &mut self.summed_efficiency {
+            summed_efficiency.draw(plot_ui);
         }
     }
 
@@ -243,6 +351,66 @@ impl MeasurementHandler {
         .context_menu(|ui| {
             self.context_menu(ui);
         });
+    }
+
+    pub fn total_efficiency(&mut self, energy: f64) -> (f64, f64) {
+        let mut efficiency = 0.0;
+        let mut uncertainty_values = Vec::new();
+
+        for fit in self.measurement_exp_fits.values() {
+            if let Some(parameters) = &fit.exp_fitter.fit_params {
+                if parameters.len() == 1 {
+                    let a = parameters[0].0 .0;
+                    let b = parameters[0].1 .0;
+                    efficiency += a * (-energy / b).exp();
+                } else if parameters.len() == 2 {
+                    let a = parameters[0].0 .0;
+                    let b = parameters[0].1 .0;
+                    let c = parameters[1].0 .0;
+                    let d = parameters[1].1 .0;
+                    efficiency += a * (-energy / b).exp() + c * (-energy / d).exp();
+                }
+            }
+
+            let uncertainity = fit.exp_fitter.uncertainity(energy, 1.0);
+            uncertainty_values.push(uncertainity);
+        }
+
+        let total_uncertainty = (uncertainty_values.iter().map(|&x| x * x).sum::<f64>()).sqrt();
+
+        (efficiency, total_uncertainty)
+    }
+
+    pub fn get_summed_efficiency(&mut self, max_x: f64) {
+        // Ensure `summed_efficiency` is initialized
+        if self.summed_efficiency.is_none() {
+            self.summed_efficiency = Some(SummedEfficiency::new());
+        }
+
+        // Collect efficiency and uncertainty values before mutably borrowing `summed_efficiency`
+        let num_points = 1000;
+        let start = 0.0;
+        let step = (max_x - start) / num_points as f64;
+
+        let mut line_points: Vec<[f64; 2]> = Vec::new();
+        let mut uncertainty_lower_points: Vec<[f64; 2]> = Vec::new();
+        let mut uncertainty_upper_points: Vec<[f64; 2]> = Vec::new();
+
+        for i in 0..num_points {
+            let x = start + i as f64 * step;
+            let (efficiency, uncertainty) = self.total_efficiency(x);
+
+            line_points.push([x, efficiency]);
+            uncertainty_lower_points.push([x, efficiency - uncertainty]);
+            uncertainty_upper_points.push([x, efficiency + uncertainty]);
+        }
+
+        // Now update `summed_efficiency` with the collected data
+        if let Some(summed_efficiency) = &mut self.summed_efficiency {
+            summed_efficiency.line.points = line_points;
+            summed_efficiency.uncertainty_lower_points = uncertainty_lower_points;
+            summed_efficiency.uncertainty_upper_points = uncertainty_upper_points;
+        }
     }
 
     pub fn ui(&mut self, ui: &mut egui::Ui, show_bottom_panel: bool, show_left_panel: bool) {

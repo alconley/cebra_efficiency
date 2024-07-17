@@ -7,6 +7,36 @@ use varpro::model::builder::SeparableModelBuilder;
 use varpro::solvers::levmar::{LevMarProblemBuilder, LevMarSolver};
 
 #[derive(Default, Clone, serde::Deserialize, serde::Serialize)]
+pub struct FitResult {
+    pub linear_parameters: Vec<f64>,
+    pub linear_variances: Vec<f64>,
+    pub nonlinear_parameters: Vec<f64>,
+    pub nonlinear_variances: Vec<f64>,
+    pub covariance_matrix: Vec<f64>,
+    pub correlation_matrix: Vec<f64>,
+    pub reduced_chi_squared: f64,
+    pub regression_standard_error: f64,
+    pub weighted_residuals: Vec<f64>,
+}
+
+impl FitResult {
+    pub fn log_info_result(&self) {
+        log::info!("Linear Parameters: {:?}", self.linear_parameters);
+        log::info!("Linear Variances: {:?}", self.linear_variances);
+        log::info!("Nonlinear Parameters: {:?}", self.nonlinear_parameters);
+        log::info!("Nonlinear Variances: {:?}", self.nonlinear_variances);
+        log::info!("Covariance Matrix: {:?}", self.covariance_matrix);
+        log::info!("Correlation Matrix: {:?}", self.correlation_matrix);
+        log::info!("Reduced Chi-squared: {:?}", self.reduced_chi_squared);
+        log::info!(
+            "Regression Standard Error: {:?}",
+            self.regression_standard_error
+        );
+        log::info!("Weighted Residuals: {:?}", self.weighted_residuals);
+    }
+}
+
+#[derive(Default, Clone, serde::Deserialize, serde::Serialize)]
 pub struct ExpFitter {
     #[allow(clippy::type_complexity)]
     pub fit_params: Option<Vec<((f64, f64), (f64, f64))>>,
@@ -16,6 +46,7 @@ pub struct ExpFitter {
     pub upper_uncertainity_points: Vec<[f64; 2]>,
     pub lower_uncertainity_points: Vec<[f64; 2]>,
     pub fit_line: EguiLine,
+    pub fit_result: Option<FitResult>,
 }
 
 impl ExpFitter {
@@ -28,6 +59,7 @@ impl ExpFitter {
             upper_uncertainity_points: Vec::new(),
             lower_uncertainity_points: Vec::new(),
             fit_line: EguiLine::new(egui::Color32::BLUE),
+            fit_result: None,
         }
     }
 
@@ -43,6 +75,83 @@ impl ExpFitter {
         x.map(|x_val| (x_val / d.powi(2)) * (-x_val / d).exp())
     }
 
+    pub fn uncertainity(&self, x: f64, sigma: f64) -> f64 {
+        if let Some(result) = &self.fit_result {
+            let observation_length = self.x.len();
+            let n_parameters = result.linear_parameters.len() + result.nonlinear_parameters.len();
+
+            let dof = observation_length as f64 - n_parameters as f64;
+
+            let prob = statrs::function::erf::erf(sigma / SQRT_2); // 1 sigma probability (0.682689492137)
+
+            let alpha = 1.0 - prob; // significance level
+
+            // we want the two-tailed t-value t_alpha/2,dof... this will be the scale factor for the confidence interval
+            let t_value = match statrs::distribution::StudentsT::new(0.0, 1.0, dof) {
+                Ok(dist) => dist.inverse_cdf(1.0 - alpha / 2.0),
+                Err(e) => {
+                    log::error!("Error creating StudentsT distribution: {:?}", e);
+                    return 0.0;
+                }
+            };
+
+            let cov = &result.covariance_matrix;
+
+            if result.linear_parameters.len() == 1 {
+                let parameter_a = result.linear_parameters[0];
+                let parameter_b = result.nonlinear_parameters[0];
+
+                let dfda = (-x / (parameter_b)).exp();
+                let dfdb = parameter_a * (x / parameter_b.powi(2)) * (-x / parameter_b).exp();
+                let rchi2_assume = 1.0;
+
+                t_value
+                    * (rchi2_assume
+                        * (dfda * dfda * cov[0]
+                            + dfda * dfdb * cov[1]
+                            + dfdb * dfda * cov[2]
+                            + dfdb * dfdb * cov[3]))
+                        .sqrt()
+            } else if result.linear_parameters.len() == 2 {
+                let parameter_a = result.linear_parameters[0];
+                let parameter_b = result.linear_parameters[1];
+                let parameter_c = result.nonlinear_parameters[0];
+                let parameter_d = result.nonlinear_parameters[1];
+
+                let dfda = (-x / (parameter_c)).exp();
+                let dfdb = (-x / (parameter_d)).exp();
+                let dfdc = parameter_a * (x / parameter_c.powi(2)) * (-x / parameter_c).exp();
+                let dfdd = parameter_b * (x / parameter_d.powi(2)) * (-x / parameter_d).exp();
+
+                let rchi2_assume = 1.0;
+
+                t_value
+                    * (rchi2_assume
+                        * (dfda * dfda * cov[0]
+                            + dfda * dfdb * cov[1]
+                            + dfda * dfdc * cov[2]
+                            + dfda * dfdd * cov[3]
+                            + dfdb * dfda * cov[4]
+                            + dfdb * dfdb * cov[5]
+                            + dfdb * dfdc * cov[6]
+                            + dfdb * dfdd * cov[7]
+                            + dfdc * dfda * cov[8]
+                            + dfdc * dfdb * cov[9]
+                            + dfdc * dfdc * cov[10]
+                            + dfdc * dfdd * cov[11]
+                            + dfdd * dfda * cov[12]
+                            + dfdd * dfdb * cov[13]
+                            + dfdd * dfdc * cov[14]
+                            + dfdd * dfdd * cov[15]))
+                        .sqrt()
+            } else {
+                0.0
+            }
+        } else {
+            0.0
+        }
+    }
+
     pub fn single_exp_fit(&mut self, initial_b_guess: f64) {
         self.fit_params = None;
         self.fit_line.name = "Single Exponential Fit".to_string();
@@ -52,8 +161,6 @@ impl ExpFitter {
         let x_data = DVector::from_vec(self.x.clone());
         let y_data = DVector::from_vec(self.y.clone());
         let weights = DVector::from_vec(self.weights.clone());
-
-        let observation_length = x_data.len();
 
         let parameter_names: Vec<String> = vec!["b".to_string()];
 
@@ -88,59 +195,10 @@ impl ExpFitter {
         if let Ok((fit_result, fit_statistics)) =
             LevMarSolver::default().fit_with_statistics(problem)
         {
-            log::info!("fit_result: {:?}\n\n", fit_result);
-            log::info!("fit_statistics: {:?}\n\n", fit_statistics);
-            log::info!(
-                "Weighted residuals: {:?}\n\n",
-                fit_statistics.weighted_residuals()
-            );
-            log::info!(
-                "Regression standard error: {:?}\n\n",
-                fit_statistics.regression_standard_error()
-            );
-            log::info!(
-                "Covariance matrix: {:?}\n",
-                fit_statistics.covariance_matrix()
-            );
+            let mut result = FitResult::default();
 
-            let cov = fit_statistics.covariance_matrix();
-
-            let weighted_residuals = fit_statistics.weighted_residuals();
-
-            // Square the weighted residuals
-            let squared_weighted_residuals: Vec<f64> = weighted_residuals
-                .iter()
-                .map(|&residual| residual * residual)
-                .collect();
-
-            // Sum up the squared weighted residuals to get the chi-squared value
-            let chi_squared: f64 = squared_weighted_residuals.iter().sum();
-            let dof = observation_length as f64 - 2.0;
-            let rchi2 = chi_squared / dof;
-
-            let sigma = 1.0;
-
-            let prob = statrs::function::erf::erf(sigma / SQRT_2);
-
-            let t_dist = match statrs::distribution::StudentsT::new(0.0, 1.0, dof) {
-                Ok(dist) => dist.inverse_cdf((1.0 + prob) / 2.0),
-                Err(e) => {
-                    log::error!("Error creating StudentsT distribution: {:?}", e);
-                    return;
-                }
-            };
-
-            log::info!("Chi-squared: {:?}\n", chi_squared);
-            log::info!("Reduced chi-squared: {:?}\n", rchi2);
-            log::info!("Degrees of freedom: {:?}\n", dof);
-            log::info!("T-distribution value: {:?}\n", t_dist);
-
-            let nonlinear_parameters = fit_result.nonlinear_parameters();
-            let nonlinear_variances = fit_statistics.nonlinear_parameters_variance();
-
-            let linear_coefficients = fit_result.linear_coefficients();
-
-            let linear_coefficients = match linear_coefficients {
+            let linear_parameters = fit_result.linear_coefficients();
+            let linear_parameters = match linear_parameters {
                 Some(coefficients) => coefficients,
                 None => {
                     log::error!("No linear coefficients found");
@@ -148,8 +206,41 @@ impl ExpFitter {
                 }
             };
             let linear_variances = fit_statistics.linear_coefficients_variance();
+            let nonlinear_parameters = fit_result.nonlinear_parameters();
+            let nonlinear_variances = fit_statistics.nonlinear_parameters_variance();
+            let covariance_matrix = fit_statistics.covariance_matrix();
+            let correlation_matrix = fit_statistics.calculate_correlation_matrix();
+            let weighted_residuals = fit_statistics.weighted_residuals();
+            let rchi2 = fit_statistics.reduced_chi2();
+            let regression_standard_error = fit_statistics.regression_standard_error();
 
-            let parameter_a = linear_coefficients[0];
+            result.linear_parameters = linear_parameters.iter().cloned().collect::<Vec<f64>>();
+            result
+                .linear_variances
+                .clone_from(linear_variances.data.as_vec());
+            result
+                .nonlinear_parameters
+                .clone_from(nonlinear_parameters.data.as_vec());
+            result
+                .nonlinear_variances
+                .clone_from(nonlinear_variances.data.as_vec());
+            result
+                .covariance_matrix
+                .clone_from(covariance_matrix.data.as_vec());
+            result
+                .correlation_matrix
+                .clone_from(correlation_matrix.data.as_vec());
+            result
+                .weighted_residuals
+                .clone_from(weighted_residuals.data.as_vec());
+            result.reduced_chi_squared = rchi2;
+            result.regression_standard_error = regression_standard_error;
+
+            result.log_info_result();
+
+            self.fit_result = Some(result);
+
+            let parameter_a = linear_parameters[0];
             let parameter_a_variance = linear_variances[0];
             let parameter_a_uncertainity = parameter_a_variance.sqrt();
 
@@ -168,7 +259,6 @@ impl ExpFitter {
                 (parameter_a, parameter_a_uncertainity),
                 (parameter_b, parameter_b_uncertainity),
             )];
-            log::info!("parameters: {:?}", parameters);
 
             self.fit_params = Some(parameters);
 
@@ -196,18 +286,7 @@ impl ExpFitter {
                 .map(|i| {
                     // followed lmfits implementation
                     let x = start + i as f64 * step;
-
-                    let dfda = (-x / (parameter_b)).exp();
-                    let dfdb = parameter_a * (x / parameter_b.powi(2)) * (-x / parameter_b).exp();
-                    let rchi2_assume = 1.0;
-
-                    let y = t_dist
-                        * (rchi2_assume
-                            * (dfda * dfda * cov[0]
-                                + dfda * dfdb * cov[1]
-                                + dfdb * dfda * cov[2]
-                                + dfdb * dfdb * cov[3]))
-                            .sqrt();
+                    let y = self.uncertainity(x, 1.0);
                     [x, y]
                 })
                 .collect();
@@ -244,8 +323,6 @@ impl ExpFitter {
         let y_data = DVector::from_vec(self.y.clone());
         let weights = DVector::from_vec(self.weights.clone());
 
-        let observation_length = x_data.len();
-
         let parameter_names: Vec<String> = vec!["b".to_string(), "d".to_string()];
 
         let initial_parameters = vec![initial_b_guess, initial_d_guess];
@@ -281,77 +358,51 @@ impl ExpFitter {
         if let Ok((fit_result, fit_statistics)) =
             LevMarSolver::default().fit_with_statistics(problem)
         {
-            log::info!("fit_result: {:?}\n", fit_result);
-            log::info!("fit_statistics: {:?}\n", fit_statistics);
-            log::info!(
-                "Weighted residuals: {:?}\n",
-                fit_statistics.weighted_residuals()
-            );
-            log::info!(
-                "Regression standard error: {:?}\n",
-                fit_statistics.regression_standard_error()
-            );
-            log::info!(
-                "Covariance matrix: {:?}\n",
-                fit_statistics.covariance_matrix()
-            );
+            let mut result = FitResult::default();
 
-            let cov = fit_statistics.covariance_matrix();
-
-            let nonlinear_parameters = fit_result.nonlinear_parameters();
-            let nonlinear_variances = fit_statistics.nonlinear_parameters_variance();
-            let n_nonlinear_parameters = nonlinear_parameters.len();
-
-            let linear_coefficients = fit_result.linear_coefficients();
-
-            let linear_coefficients = match linear_coefficients {
+            let linear_parameters = fit_result.linear_coefficients();
+            let linear_parameters = match linear_parameters {
                 Some(coefficients) => coefficients,
                 None => {
                     log::error!("No linear coefficients found");
                     return;
                 }
             };
-
             let linear_variances = fit_statistics.linear_coefficients_variance();
-            let n_linear_parameters = linear_coefficients.len();
-
-            let n_paramaters = n_nonlinear_parameters + n_linear_parameters; // total number of parameters
-
+            let nonlinear_parameters = fit_result.nonlinear_parameters();
+            let nonlinear_variances = fit_statistics.nonlinear_parameters_variance();
+            let covariance_matrix = fit_statistics.covariance_matrix();
+            let correlation_matrix = fit_statistics.calculate_correlation_matrix();
             let weighted_residuals = fit_statistics.weighted_residuals();
+            let rchi2 = fit_statistics.reduced_chi2();
+            let regression_standard_error = fit_statistics.regression_standard_error();
 
-            // Square the weighted residuals
-            let squared_weighted_residuals: Vec<f64> = weighted_residuals
-                .iter()
-                .map(|&residual| residual * residual)
-                .collect();
+            result.linear_parameters = linear_parameters.iter().cloned().collect::<Vec<f64>>();
+            result
+                .linear_variances
+                .clone_from(linear_variances.data.as_vec());
+            result
+                .nonlinear_parameters
+                .clone_from(nonlinear_parameters.data.as_vec());
+            result
+                .nonlinear_variances
+                .clone_from(nonlinear_variances.data.as_vec());
+            result
+                .covariance_matrix
+                .clone_from(covariance_matrix.data.as_vec());
+            result
+                .correlation_matrix
+                .clone_from(correlation_matrix.data.as_vec());
+            result
+                .weighted_residuals
+                .clone_from(weighted_residuals.data.as_vec());
+            result.reduced_chi_squared = rchi2;
+            result.regression_standard_error = regression_standard_error;
 
-            // Sum up the squared weighted residuals to get the chi-squared value
-            let chi_squared: f64 = squared_weighted_residuals.iter().sum();
-            let dof = observation_length as f64 - n_paramaters as f64;
-            let rchi2 = chi_squared / dof;
-            // let rchi2 = 1.0;
+            result.log_info_result();
 
-            let sigma = 1.0;
-            let prob = statrs::function::erf::erf(sigma / SQRT_2); // 1 sigma probability (0.682689492137)
-                                                                   // prob could also be a parameter of the function so the user can deside what level of significance they want to use
-
-            let alpha = 1.0 - prob; // significance level
-
-            // we want the two-tailed t-value t_alpha/2,dof... this will be the scale factor for the confidence interval
-            let t_value = match statrs::distribution::StudentsT::new(0.0, 1.0, dof) {
-                Ok(dist) => dist.inverse_cdf(1.0 - alpha / 2.0),
-                Err(e) => {
-                    log::error!("Error creating StudentsT distribution: {:?}", e);
-                    return;
-                }
-            };
-
-            log::info!("Chi-squared: {:?}\n", chi_squared);
-            log::info!("Reduced chi-squared: {:?}\n", rchi2);
-            log::info!("Degrees of freedom: {:?}\n", dof);
-            log::info!("T-value: {:?}\n", t_value);
-
-            let parameter_a = linear_coefficients[0];
+            self.fit_result = Some(result);
+            let parameter_a = linear_parameters[0];
             let parameter_a_variance = linear_variances[0];
             let parameter_a_uncertainity = parameter_a_variance.sqrt();
 
@@ -364,7 +415,7 @@ impl ExpFitter {
                 (parameter_b, parameter_b_uncertainity),
             );
 
-            let parameter_c = linear_coefficients[1];
+            let parameter_c = linear_parameters[1];
             let parameter_c_variance = linear_variances[1];
             let parameter_c_uncertainity = parameter_c_variance.sqrt();
 
@@ -413,40 +464,7 @@ impl ExpFitter {
                 .map(|i| {
                     // followed lmfits implementation
                     let x = start + i as f64 * step;
-
-                    let parameter_a = linear_coefficients[0];
-                    let parameter_b = linear_coefficients[1];
-                    let parameter_c = nonlinear_parameters[0];
-                    let parameter_d = nonlinear_parameters[1];
-
-                    // y= a e^-x/c + b e^-x/d
-
-                    let dfda = (-x / (parameter_c)).exp();
-                    let dfdb = (-x / (parameter_d)).exp();
-                    let dfdc = parameter_a * (x / parameter_c.powi(2)) * (-x / parameter_c).exp();
-                    let dfdd = parameter_b * (x / parameter_d.powi(2)) * (-x / parameter_d).exp();
-                    // must force rchi2 to be 1.0
-                    let rchi2 = 1.0;
-                    let y = t_value
-                        * (rchi2
-                            * (dfda * dfda * cov[0]
-                                + dfda * dfdb * cov[1]
-                                + dfda * dfdc * cov[2]
-                                + dfda * dfdd * cov[3]
-                                + dfdb * dfda * cov[4]
-                                + dfdb * dfdb * cov[5]
-                                + dfdb * dfdc * cov[6]
-                                + dfdb * dfdd * cov[7]
-                                + dfdc * dfda * cov[8]
-                                + dfdc * dfdb * cov[9]
-                                + dfdc * dfdc * cov[10]
-                                + dfdc * dfdd * cov[11]
-                                + dfdd * dfda * cov[12]
-                                + dfdd * dfdb * cov[13]
-                                + dfdd * dfdc * cov[14]
-                                + dfdd * dfdd * cov[15]))
-                            .sqrt();
-
+                    let y = self.uncertainity(x, 1.0);
                     [x, y]
                 })
                 .collect();
