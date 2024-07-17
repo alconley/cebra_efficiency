@@ -215,12 +215,24 @@ impl ExpFitter {
             let regression_standard_error = fit_statistics.regression_standard_error();
 
             result.linear_parameters = linear_parameters.iter().cloned().collect::<Vec<f64>>();
-            result.linear_variances = linear_variances.data.as_vec().clone();
-            result.nonlinear_parameters = nonlinear_parameters.data.as_vec().clone();
-            result.nonlinear_variances = nonlinear_variances.data.as_vec().clone();
-            result.covariance_matrix = covariance_matrix.data.as_vec().clone();
-            result.correlation_matrix = correlation_matrix.data.as_vec().clone();
-            result.weighted_residuals = weighted_residuals.data.as_vec().clone();
+            result
+                .linear_variances
+                .clone_from(linear_variances.data.as_vec());
+            result
+                .nonlinear_parameters
+                .clone_from(nonlinear_parameters.data.as_vec());
+            result
+                .nonlinear_variances
+                .clone_from(nonlinear_variances.data.as_vec());
+            result
+                .covariance_matrix
+                .clone_from(covariance_matrix.data.as_vec());
+            result
+                .correlation_matrix
+                .clone_from(correlation_matrix.data.as_vec());
+            result
+                .weighted_residuals
+                .clone_from(weighted_residuals.data.as_vec());
             result.reduced_chi_squared = rchi2;
             result.regression_standard_error = regression_standard_error;
 
@@ -366,12 +378,24 @@ impl ExpFitter {
             let regression_standard_error = fit_statistics.regression_standard_error();
 
             result.linear_parameters = linear_parameters.iter().cloned().collect::<Vec<f64>>();
-            result.linear_variances = linear_variances.data.as_vec().clone();
-            result.nonlinear_parameters = nonlinear_parameters.data.as_vec().clone();
-            result.nonlinear_variances = nonlinear_variances.data.as_vec().clone();
-            result.covariance_matrix = covariance_matrix.data.as_vec().clone();
-            result.correlation_matrix = correlation_matrix.data.as_vec().clone();
-            result.weighted_residuals = weighted_residuals.data.as_vec().clone();
+            result
+                .linear_variances
+                .clone_from(linear_variances.data.as_vec());
+            result
+                .nonlinear_parameters
+                .clone_from(nonlinear_parameters.data.as_vec());
+            result
+                .nonlinear_variances
+                .clone_from(nonlinear_variances.data.as_vec());
+            result
+                .covariance_matrix
+                .clone_from(covariance_matrix.data.as_vec());
+            result
+                .correlation_matrix
+                .clone_from(correlation_matrix.data.as_vec());
+            result
+                .weighted_residuals
+                .clone_from(weighted_residuals.data.as_vec());
             result.reduced_chi_squared = rchi2;
             result.regression_standard_error = regression_standard_error;
 
