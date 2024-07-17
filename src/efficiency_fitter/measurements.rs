@@ -245,11 +245,42 @@ impl MeasurementHandler {
         });
     }
 
+    pub fn total_efficiency(&self, energy: f64) -> f64 {
+
+        let mut efficiency = 0.0;
+
+        for fit in self.measurement_exp_fits.values() {
+            if let Some(parameters) = &fit.exp_fitter.fit_params {
+
+                if parameters.len() == 1 {
+                    let a = parameters[0].0.0;
+                    let b = parameters[0].1.0;
+    
+                    efficiency += a * (-energy / b).exp();
+
+                } else if parameters.len() == 2 {
+                    let a = parameters[0].0.0;
+                    let b = parameters[0].1.0;
+                    let c = parameters[1].0.0;
+                    let d = parameters[1].1.0;
+    
+                    efficiency += a * (-energy / b).exp() + c * (-energy / d).exp();
+                }
+
+            }
+        }
+
+        eprintln!("Total efficiency: {}", efficiency);
+        efficiency
+    }
+
     pub fn ui(&mut self, ui: &mut egui::Ui, show_bottom_panel: bool, show_left_panel: bool) {
         egui::TopBottomPanel::bottom("efficiency_bottom")
             .resizable(true)
             .show_animated_inside(ui, show_bottom_panel, |ui| {
                 self.fit_detectors_ui(ui);
+
+                self.total_efficiency(1000.0);
             });
 
         egui::SidePanel::left("cebra_efficiency_left_side_panel").show_animated_inside(

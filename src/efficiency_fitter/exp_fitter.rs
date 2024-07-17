@@ -7,6 +7,20 @@ use varpro::model::builder::SeparableModelBuilder;
 use varpro::solvers::levmar::{LevMarProblemBuilder, LevMarSolver};
 
 #[derive(Default, Clone, serde::Deserialize, serde::Serialize)]
+pub struct FitResult {
+    pub linear_parameters: Vec<f64>,
+    pub linear_variances: Vec<f64>,
+    pub nonlinear_parameters: Vec<f64>,
+    pub nonlinear_variances: Vec<f64>,
+    pub covariance_matrix: Vec<f64>,
+    pub chi_squared: f64,
+    pub degrees_of_freedom: f64,
+    pub reduced_chi_squared: f64,
+    pub regression_standard_error: Vec<f64>,
+    pub weighted_residuals: Vec<f64>,
+}
+
+#[derive(Default, Clone, serde::Deserialize, serde::Serialize)]
 pub struct ExpFitter {
     #[allow(clippy::type_complexity)]
     pub fit_params: Option<Vec<((f64, f64), (f64, f64))>>,
@@ -16,6 +30,7 @@ pub struct ExpFitter {
     pub upper_uncertainity_points: Vec<[f64; 2]>,
     pub lower_uncertainity_points: Vec<[f64; 2]>,
     pub fit_line: EguiLine,
+    pub fit_result: Option<FitResult>,
 }
 
 impl ExpFitter {
@@ -28,6 +43,7 @@ impl ExpFitter {
             upper_uncertainity_points: Vec::new(),
             lower_uncertainity_points: Vec::new(),
             fit_line: EguiLine::new(egui::Color32::BLUE),
+            fit_result: None,
         }
     }
 
@@ -42,6 +58,26 @@ impl ExpFitter {
     fn exponential_pd_d(x: &DVector<f64>, d: f64) -> DVector<f64> {
         x.map(|x_val| (x_val / d.powi(2)) * (-x_val / d).exp())
     }
+
+    // let confidence_band: Vec<[f64; 2]> = (0..=num_points)
+    // .map(|i| {
+    //     // followed lmfits implementation
+    //     let x = start + i as f64 * step;
+
+    //     let dfda = (-x / (parameter_b)).exp();
+    //     let dfdb = parameter_a * (x / parameter_b.powi(2)) * (-x / parameter_b).exp();
+    //     let rchi2_assume = 1.0;
+
+    //     let y = t_dist
+    //         * (rchi2_assume
+    //             * (dfda * dfda * cov[0]
+    //                 + dfda * dfdb * cov[1]
+    //                 + dfdb * dfda * cov[2]
+    //                 + dfdb * dfdb * cov[3]))
+    //             .sqrt();
+    //     [x, y]
+    // })
+    // .collect();
 
     pub fn single_exp_fit(&mut self, initial_b_guess: f64) {
         self.fit_params = None;
