@@ -73,71 +73,76 @@ impl Detector {
             }
         });
 
-        ui.collapsing(self.name.to_string(), |ui| {
-            let gamma_lines = gamma_source
-                .gamma_lines
-                .iter()
-                .map(|line| format!("{:.1} keV", line.energy))
-                .collect::<Vec<_>>();
+        // ui.collapsing(self.name.to_string(), |ui| {
+        egui::CollapsingHeader::new(self.name.to_string())
+            .default_open(true)
+            .show(ui, |ui| {
+                let gamma_lines = gamma_source
+                    .gamma_lines
+                    .iter()
+                    .map(|line| format!("{:.1} keV", line.energy))
+                    .collect::<Vec<_>>();
 
-            egui::Grid::new("detector_grid")
-                .striped(false)
-                .num_columns(4)
-                .show(ui, |ui| {
-                    ui.label("Energy");
-                    ui.label("Counts");
-                    ui.label("Uncertainty");
-                    ui.end_row();
+                egui::Grid::new("detector_grid")
+                    .striped(false)
+                    .num_columns(4)
+                    .show(ui, |ui| {
+                        ui.label("Energy");
+                        ui.label("Counts");
+                        ui.label("Uncertainty");
+                        ui.end_row();
 
-                    let mut index_to_remove = None;
-                    for (index, line) in self.lines.iter_mut().enumerate() {
-                        egui::ComboBox::from_id_source(format!("Line {}", index))
-                            .selected_text(format!("{:.1} keV", line.energy))
-                            .show_ui(ui, |ui| {
-                                for (gamma_index, gamma_line_str) in gamma_lines.iter().enumerate()
-                                {
-                                    if ui
-                                        .selectable_label(
-                                            line.energy
-                                                == gamma_source.gamma_lines[gamma_index].energy,
-                                            gamma_line_str,
-                                        )
-                                        .clicked()
+                        let mut index_to_remove = None;
+                        for (index, line) in self.lines.iter_mut().enumerate() {
+                            egui::ComboBox::from_id_source(format!("Line {}", index))
+                                .selected_text(format!("{:.1} keV", line.energy))
+                                .show_ui(ui, |ui| {
+                                    for (gamma_index, gamma_line_str) in
+                                        gamma_lines.iter().enumerate()
                                     {
-                                        line.energy = gamma_source.gamma_lines[gamma_index].energy;
-                                        line.intensity =
-                                            gamma_source.gamma_lines[gamma_index].intensity;
-                                        line.intensity_uncertainty = gamma_source.gamma_lines
-                                            [gamma_index]
-                                            .intensity_uncertainty;
+                                        if ui
+                                            .selectable_label(
+                                                line.energy
+                                                    == gamma_source.gamma_lines[gamma_index].energy,
+                                                gamma_line_str,
+                                            )
+                                            .clicked()
+                                        {
+                                            line.energy =
+                                                gamma_source.gamma_lines[gamma_index].energy;
+                                            line.intensity =
+                                                gamma_source.gamma_lines[gamma_index].intensity;
+                                            line.intensity_uncertainty = gamma_source.gamma_lines
+                                                [gamma_index]
+                                                .intensity_uncertainty;
+                                        }
                                     }
-                                }
-                            });
+                                });
 
-                        line.ui(ui);
+                            line.ui(ui);
 
-                        if ui.button("X").clicked() {
-                            index_to_remove = Some(index);
+                            if ui.button("X").clicked() {
+                                index_to_remove = Some(index);
+                            }
+
+                            ui.end_row();
                         }
 
-                        ui.end_row();
-                    }
+                        if let Some(index) = index_to_remove {
+                            self.remove_line(index);
+                        }
+                    });
 
-                    if let Some(index) = index_to_remove {
-                        self.remove_line(index);
+                ui.horizontal(|ui| {
+                    if ui.button("+").clicked() {
+                        self.lines.push(DetectorLine::default());
                     }
                 });
 
-            ui.horizontal(|ui| {
-                if ui.button("+").clicked() {
-                    self.lines.push(DetectorLine::default());
+                for line in &mut self.lines {
+                    gamma_source.gamma_line_efficiency_from_source_measurement(line);
                 }
             });
-
-            for line in &mut self.lines {
-                gamma_source.gamma_line_efficiency_from_source_measurement(line);
-            }
-        });
     }
 
     fn remove_line(&mut self, index: usize) {

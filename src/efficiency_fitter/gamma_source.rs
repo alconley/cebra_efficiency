@@ -73,6 +73,8 @@ impl GammaSource {
     }
 
     pub fn fsu_152eu_source(&mut self) {
+        self.gamma_lines.clear();
+
         self.name = "152Eu".to_string();
         self.half_life = 13.517; // years
 
@@ -93,6 +95,8 @@ impl GammaSource {
     }
 
     pub fn fsu_56co_source(&mut self) {
+        self.gamma_lines.clear();
+
         self.name = "56Co".to_string();
 
         let co60_halflife_days = 77.236; // days
@@ -106,6 +110,19 @@ impl GammaSource {
         self.add_gamma_line(1360.196, 4.283, 0.013);
         self.add_gamma_line(2598.438, 16.96, 0.04);
         self.add_gamma_line(3451.119, 0.942, 0.006);
+    }
+
+    pub fn fsu_60co_source(&mut self) {
+        self.gamma_lines.clear();
+
+        self.name = "60Co".to_string();
+        self.half_life = 5.2714; // years
+
+        self.source_activity_calibration.activity = 185.3; // kBq
+        self.source_activity_calibration.date = chrono::NaiveDate::from_ymd_opt(2018, 9, 1);
+
+        self.add_gamma_line(1173.22, 99.85, 0.03);
+        self.add_gamma_line(1332.492, 99.9826, 0.0006);
     }
 
     pub fn add_gamma_line(&mut self, energy: f64, intensity: f64, intensity_uncertainty: f64) {
@@ -160,18 +177,25 @@ impl GammaSource {
     }
 
     pub fn source_ui(&mut self, ui: &mut egui::Ui) {
-        ui.collapsing("Source", |ui| {
-            ui.horizontal(|ui| {
-                ui.label("FSU Sources:");
+        egui::CollapsingHeader::new("Source")
+            .default_open(true)
+            .show(ui, |ui| {
 
-                if ui.button("152Eu").clicked() {
-                    self.fsu_152eu_source();
-                }
+                ui.horizontal(|ui| {
+                    ui.label("FSU Sources:");
 
-                if ui.button("56Co").clicked() {
-                    self.fsu_56co_source();
-                }
-            });
+                    if ui.button("152Eu").clicked() {
+                        self.fsu_152eu_source();
+                    }
+
+                    if ui.button("60Co").clicked() {
+                        self.fsu_60co_source();
+                    }
+
+                    if ui.button("56Co").clicked() {
+                        self.fsu_56co_source();
+                    }
+                });
 
             ui.separator();
 

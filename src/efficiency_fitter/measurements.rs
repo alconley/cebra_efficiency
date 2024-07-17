@@ -23,42 +23,48 @@ impl Measurement {
     }
 
     pub fn measurement_ui(&mut self, ui: &mut egui::Ui) {
-        ui.collapsing("Measurement", |ui: &mut egui::Ui| {
-            // ensure that there are gamma lines to display
-            if self.gamma_source.gamma_lines.is_empty() {
-                ui.label("No gamma lines added to source");
-                return;
-            }
-
-            let mut index_to_remove = None;
-
-            for (index, detector) in &mut self.detectors.iter_mut().enumerate() {
-                detector.ui(ui, &self.gamma_source);
-
-                if detector.to_remove == Some(true) {
-                    index_to_remove = Some(index);
+        egui::CollapsingHeader::new("Measurement")
+            .id_source(format!("{} Measurement", self.gamma_source.name))
+            .default_open(true)
+            .show(ui, |ui| {
+                // ensure that there are gamma lines to display
+                if self.gamma_source.gamma_lines.is_empty() {
+                    ui.label("No gamma lines added to source");
+                    return;
                 }
-            }
 
-            ui.separator();
+                let mut index_to_remove = None;
 
-            if ui.button("Add Detector").clicked() {
-                self.detectors.push(Detector::default());
-            }
+                for (index, detector) in &mut self.detectors.iter_mut().enumerate() {
+                    detector.ui(ui, &self.gamma_source);
 
-            if let Some(index) = index_to_remove {
-                self.detectors.remove(index);
-            }
+                    if detector.to_remove == Some(true) {
+                        index_to_remove = Some(index);
+                    }
+                }
 
-            ui.separator();
-        });
+                ui.separator();
+
+                if ui.button("Add Detector").clicked() {
+                    self.detectors.push(Detector::default());
+                }
+
+                if let Some(index) = index_to_remove {
+                    self.detectors.remove(index);
+                }
+
+                ui.separator();
+            });
     }
 
-    pub fn update_ui(&mut self, ui: &mut egui::Ui) {
-        ui.collapsing(format!("{} Measurement", self.gamma_source.name), |ui| {
-            self.gamma_source.source_ui(ui);
-            self.measurement_ui(ui);
-        });
+    pub fn update_ui(&mut self, ui: &mut egui::Ui, index: usize) {
+        egui::CollapsingHeader::new(format!("{} Measurement", self.gamma_source.name))
+            .id_source(index)
+            .default_open(true)
+            .show(ui, |ui| {
+                self.gamma_source.source_ui(ui);
+                self.measurement_ui(ui);
+            });
     }
 
     pub fn draw(&mut self, plot_ui: &mut egui_plot::PlotUi) {
@@ -253,27 +259,29 @@ impl MeasurementHandler {
                 let mut index_to_remove: Option<usize> = None;
 
                 egui::ScrollArea::vertical().show(ui, |ui| {
-                    ui.collapsing("Sources", |ui| {
-                        for (index, measurement) in self.measurements.iter_mut().enumerate() {
-                            measurement.update_ui(ui);
+                    egui::CollapsingHeader::new("Sources")
+                        .default_open(true)
+                        .show(ui, |ui| {
+                            for (index, measurement) in self.measurements.iter_mut().enumerate() {
+                                measurement.update_ui(ui, index);
 
-                            if ui.button("Remove Source").clicked() {
-                                index_to_remove = Some(index);
+                                if ui.button("Remove Source").clicked() {
+                                    index_to_remove = Some(index);
+                                }
+
+                                ui.separator();
+                            }
+
+                            if let Some(index) = index_to_remove {
+                                self.remove_measurement(index);
+                            }
+
+                            if ui.button("New Source").clicked() {
+                                self.measurements.push(Measurement::new(None));
                             }
 
                             ui.separator();
-                        }
-
-                        if let Some(index) = index_to_remove {
-                            self.remove_measurement(index);
-                        }
-
-                        if ui.button("New Source").clicked() {
-                            self.measurements.push(Measurement::new(None));
-                        }
-
-                        ui.separator();
-                    });
+                        });
                 });
             },
         );
