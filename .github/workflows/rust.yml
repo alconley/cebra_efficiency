@@ -17,7 +17,7 @@ jobs:
 
       # Install GDK 3.0 Development Files
       - name: Install GTK3 development files
-        run: sudo apt-get update && sudo apt-get install -y libgtk-3-dev
+        run: sudo apt-get update && sudo apt-get install --fix-missing -y libgtk-3-dev
 
       # Optionally set PKG_CONFIG_PATH if gdk-3.0.pc is not found by pkg-config
       - name: Set PKG_CONFIG_PATH
@@ -59,7 +59,9 @@ jobs:
           profile: minimal
           toolchain: stable
           override: true
-      - run: sudo apt-get install libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libxkbcommon-dev libssl-dev libgtk-3-dev
+      - run: |
+          sudo apt-get update
+          sudo apt-get install --fix-missing -y libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libxkbcommon-dev libssl-dev libgtk-3-dev
       - uses: actions-rs/cargo@v1
         with:
           command: test
@@ -88,7 +90,7 @@ jobs:
       - uses: actions/checkout@v2
 
       - name: Install GDK 3.0 Development Files
-        run: sudo apt-get update && sudo apt-get install -y libgtk-3-dev
+        run: sudo apt-get update && sudo apt-get install --fix-missing -y libgtk-3-dev
     
       - name: Set PKG_CONFIG_PATH
         run: echo "PKG_CONFIG_PATH=$(pkg-config --variable pc_path pkg-config)" 
