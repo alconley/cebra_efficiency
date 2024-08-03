@@ -326,3 +326,4 @@ impl GammaSource {
         self.gamma_lines.remove(index);
     }
 }
+

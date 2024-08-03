@@ -169,6 +169,37 @@ impl Detector {
     }
 
     pub fn menu_button(&mut self, ui: &mut egui::Ui) {
-        self.points.menu_button(ui);
+        ui.horizontal(|ui| {
+            if ui
+            .button("📋")
+            .on_hover_text("Copy data to clipboard (CSV format)\nEnergy,Counts,Uncertainty,Intensity,Intensity Uncertainty,Efficiency,Efficiency Uncertainty")
+            .clicked()
+                {
+                    let stat_str = self.lines_csv();
+                    ui.output_mut(|o| o.copied_text = stat_str);
+                }
+            self.points.menu_button(ui);
+        });
+    }
+
+    pub fn lines_csv(&self) -> String {
+        let mut csv = String::new();
+
+        csv.push_str("Energy,Counts,Uncertainty,Intensity,Intensity Uncertainty,Efficiency,Efficiency Uncertainty\n");
+
+        for line in &self.lines {
+            csv.push_str(&format!(
+                "{},{},{},{},{},{},{}\n",
+                line.energy,
+                line.count,
+                line.uncertainty,
+                line.intensity,
+                line.intensity_uncertainty,
+                line.efficiency,
+                line.efficiency_uncertainty
+            ));
+        }
+
+        csv
     }
 }

@@ -542,8 +542,39 @@ impl ExpFitter {
         }
     }
 
+    pub fn points_csv(&self) -> String {
+        let mut csv = String::new();
+        csv.push_str("X,Y,Uncertainty\n");
+
+        for (fit_point, upper_point) in self
+            .fit_line
+            .points
+            .iter()
+            .zip(self.upper_uncertainity_points.iter())
+        {
+            let uncertainty = upper_point[1] - fit_point[1];
+            csv.push_str(&format!(
+                "{},{},{}\n",
+                fit_point[0], fit_point[1], uncertainty
+            ));
+        }
+
+        csv
+    }
+
     pub fn menu_button(&mut self, ui: &mut egui::Ui) {
-        self.fit_line.menu_button(ui);
+        ui.horizontal(|ui| {
+            if ui
+                .button("📋")
+                .on_hover_text("Copy data to clipboard (CSV format)\nX,Y,Uncertainty")
+                .clicked()
+            {
+                let csv = self.points_csv();
+                ui.output_mut(|o| o.copied_text = csv);
+            }
+
+            self.fit_line.menu_button(ui);
+        });
     }
 }
 
