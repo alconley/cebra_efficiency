@@ -96,7 +96,7 @@ pub struct SummedEfficiency {
 impl SummedEfficiency {
     pub fn new() -> Self {
         let mut line = EguiLine::new(egui::Color32::RED);
-        line.name = "Summed Efficiency".to_string();
+        line.name = "Summed".to_string();
 
         Self {
             line,
@@ -150,6 +150,20 @@ impl SummedEfficiency {
                 plot_ui.polygon(uncertainity_band);
             }
         }
+    }
+
+    pub fn csv_points(&self) -> String {
+        let mut csv = String::new();
+
+        csv.push_str("Energy, Efficiency, Uncertainity\n");
+        for (index, point) in self.line.points.iter().enumerate() {
+            csv.push_str(&format!(
+                "{}, {}, {}\n",
+                point[0], point[1], self.uncertainty[index]
+            ));
+        }
+
+        csv
     }
 }
 
@@ -269,18 +283,20 @@ impl MeasurementHandler {
 
     fn context_menu(&mut self, ui: &mut egui::Ui) {
         egui::ScrollArea::vertical().show(ui, |ui| {
-            ui.heading("Context Menu");
+            ui.heading("Efficiency Menu");
 
             self.plot_settings.menu_button(ui);
 
             ui.separator();
 
+            ui.heading("Measurements");
             for measurement in self.measurements.iter_mut() {
                 measurement.menu_button(ui);
             }
 
             ui.separator();
 
+            ui.heading("Fits");
             for (name, fitter) in self.measurement_exp_fits.iter_mut() {
                 ui.collapsing(format!("{} Fitter", name), |ui| {
                     fitter.menu_button(ui);
@@ -289,9 +305,8 @@ impl MeasurementHandler {
 
             ui.separator();
 
-            if self.summed_efficiency.is_none()
-                && ui.button("Add Summing Efficiency Plot").clicked()
-            {
+            ui.heading("Summed Efficiency");
+            if self.summed_efficiency.is_none() && ui.button("Add Summed Line").clicked() {
                 self.summed_efficiency = Some(SummedEfficiency::new());
             }
 
@@ -313,9 +328,22 @@ impl MeasurementHandler {
             }
 
             if let Some(summed_efficiency) = &mut self.summed_efficiency {
-                summed_efficiency.line.menu_button(ui);
+                ui.horizontal(|ui| {
+                    if ui
+                        .button("📋")
+                        .on_hover_text(
+                            "Copy data to clipboard (CSV format)\nEnergy, Efficiency, Uncertainty",
+                        )
+                        .clicked()
+                    {
+                        let stat_str = summed_efficiency.csv_points();
+                        ui.output_mut(|o| o.copied_text = stat_str);
+                    }
 
-                if ui.button("Clear Summed Efficiency").clicked() {
+                    summed_efficiency.line.menu_button(ui);
+                });
+
+                if ui.button("Clear").clicked() {
                     self.summed_efficiency = None;
                 }
             }
@@ -393,6 +421,7 @@ impl MeasurementHandler {
         let step = (max_x - start) / num_points as f64;
 
         let mut line_points: Vec<[f64; 2]> = Vec::new();
+        let mut uncertainity_values: Vec<f64> = Vec::new();
         let mut uncertainty_lower_points: Vec<[f64; 2]> = Vec::new();
         let mut uncertainty_upper_points: Vec<[f64; 2]> = Vec::new();
 
@@ -401,6 +430,7 @@ impl MeasurementHandler {
             let (efficiency, uncertainty) = self.total_efficiency(x);
 
             line_points.push([x, efficiency]);
+            uncertainity_values.push(uncertainty);
             uncertainty_lower_points.push([x, efficiency - uncertainty]);
             uncertainty_upper_points.push([x, efficiency + uncertainty]);
         }
@@ -408,6 +438,7 @@ impl MeasurementHandler {
         // Now update `summed_efficiency` with the collected data
         if let Some(summed_efficiency) = &mut self.summed_efficiency {
             summed_efficiency.line.points = line_points;
+            summed_efficiency.uncertainty = uncertainity_values;
             summed_efficiency.uncertainty_lower_points = uncertainty_lower_points;
             summed_efficiency.uncertainty_upper_points = uncertainty_upper_points;
         }
